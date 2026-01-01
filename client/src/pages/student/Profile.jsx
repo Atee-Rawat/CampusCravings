@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, GraduationCap, LogOut, Heart, Edit2 } from 'lucide-react';
+import { User, Mail, Phone, GraduationCap, LogOut, Heart, Edit2, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
     const { user, logout, updateProfile } = useAuth();
+    const { theme, toggleTheme, isDark } = useTheme();
     const [editing, setEditing] = useState(false);
     const [fullName, setFullName] = useState(user?.fullName || '');
 
@@ -106,6 +108,56 @@ const Profile = () => {
                 )}
 
                 <p style={{ opacity: 0.9 }}>{user?.university?.name}</p>
+            </div>
+
+            {/* Theme Toggle */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: 'var(--space-md)',
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: 'var(--space-lg)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    {isDark ? <Moon size={20} style={{ color: 'var(--text-muted)' }} /> : <Sun size={20} style={{ color: 'var(--warning)' }} />}
+                    <div>
+                        <p style={{ fontWeight: 600 }}>Appearance</p>
+                        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                            {isDark ? 'Dark Mode' : 'Light Mode'}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={toggleTheme}
+                    style={{
+                        width: 56,
+                        height: 28,
+                        borderRadius: 'var(--radius-full)',
+                        background: isDark ? 'var(--primary-500)' : 'var(--bg-elevated)',
+                        position: 'relative',
+                        transition: 'background var(--transition-normal)',
+                        border: '1px solid var(--border-light)'
+                    }}
+                >
+                    <span style={{
+                        position: 'absolute',
+                        top: 2,
+                        left: isDark ? 30 : 2,
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: 'white',
+                        transition: 'left var(--transition-normal)',
+                        boxShadow: 'var(--shadow-sm)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {isDark ? <Moon size={12} style={{ color: 'var(--primary-500)' }} /> : <Sun size={12} style={{ color: 'var(--warning)' }} />}
+                    </span>
+                </button>
             </div>
 
             {/* Info Cards */}

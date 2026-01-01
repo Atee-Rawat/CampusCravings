@@ -11,7 +11,12 @@
     "build": "cd client && npm run build",
     "start": "cd server && npm start"
   },
-  "keywords": ["food-ordering", "university", "mern", "campus"],
+  "keywords": [
+    "food-ordering",
+    "university",
+    "mern",
+    "campus"
+  ],
   "author": "CampusCravings Team",
   "license": "MIT",
   "devDependencies": {
