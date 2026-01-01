@@ -1,9 +1,56 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { outletsAPI, menuAPI } from '../../services/api';
+import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf } from 'lucide-react';
+import { outletsAPI, menuAPI, analyzeAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
+
+// Fallback nutrition estimator (used if AI fails)
+const estimateFallbackNutrition = (item) => {
+    const name = item.name.toLowerCase();
+    const desc = (item.description || '').toLowerCase();
+    const combined = name + ' ' + desc;
+
+    let calories = 250, protein = 10, carbs = 30;
+    let isHealthy = true;
+
+    // Drinks - special handling
+    if (/coke|cola|soda|pepsi|sprite|fanta/.test(combined)) {
+        return { nutrition: { calories: 140, protein: 0, carbs: 39 }, isHealthy: false };
+    }
+    if (/juice|smoothie|shake|coffee|tea/.test(combined)) {
+        return { nutrition: { calories: 120, protein: 2, carbs: 28 }, isHealthy: true };
+    }
+
+    // High calorie indicators
+    if (/fried|cheese|cream|butter|mayo|deep/.test(combined)) {
+        calories += 150; isHealthy = false;
+    }
+    if (/pizza|burger|fries|nachos|loaded/.test(combined)) {
+        calories += 200; carbs += 20; isHealthy = false;
+    }
+    if (/chocolate|cake|ice cream|brownie|pastry|cookie/.test(combined)) {
+        calories += 180; carbs += 40; isHealthy = false;
+    }
+
+    // Healthy indicators
+    if (/salad|grilled|steamed|fresh|green|veggie|fruit/.test(combined)) {
+        calories -= 80; isHealthy = true;
+    }
+    if (/protein|chicken breast|fish|egg|paneer|tofu/.test(combined)) {
+        protein += 15;
+    }
+    if (/rice|noodle|pasta|bread|roti|naan/.test(combined)) {
+        carbs += 25;
+    }
+
+    if (!item.isVeg) protein += 8;
+
+    return {
+        nutrition: { calories: Math.max(50, calories), protein: Math.max(0, protein), carbs: Math.max(5, carbs) },
+        isHealthy
+    };
+};
 
 const Outlet = () => {
     const { slug } = useParams();
@@ -12,15 +59,16 @@ const Outlet = () => {
 
     const [outlet, setOutlet] = useState(null);
     const [menu, setMenu] = useState({});
+    const [nutritionData, setNutritionData] = useState({}); // AI nutrition cache
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState('');
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [healthyOnly, setHealthyOnly] = useState(false);
 
     useEffect(() => {
         const fetchOutletAndMenu = async () => {
             try {
-                // Fetch outlet details
                 const outletRes = await outletsAPI.getBySlug(slug);
                 setOutlet(outletRes.data.data.outlet);
                 setCategories(outletRes.data.data.categories);
@@ -29,9 +77,52 @@ const Outlet = () => {
                     setActiveCategory(outletRes.data.data.categories[0]);
                 }
 
-                // Fetch full menu
                 const menuRes = await menuAPI.getByOutlet(outletRes.data.data.outlet._id);
                 setMenu(menuRes.data.data);
+
+                // Check cached nutrition data first (24 hour cache)
+                const cacheKey = `nutrition_${outletRes.data.data.outlet._id}`;
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    try {
+                        const { data, timestamp } = JSON.parse(cached);
+                        // Check if cache is less than 24 hours old
+                        if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+                            setNutritionData(data);
+                            return; // Skip API call
+                        }
+                    } catch (e) {
+                        // Invalid cache, continue to API
+                    }
+                }
+
+                // Fetch AI nutrition for all items
+                const allItems = Object.values(menuRes.data.data).flat();
+                try {
+                    const nutritionRes = await analyzeAPI.batchNutrition(
+                        allItems.map(item => ({
+                            _id: item._id,
+                            name: item.name,
+                            description: item.description,
+                            isVeg: item.isVeg
+                        }))
+                    );
+
+                    // Create nutrition cache by item ID
+                    const cache = {};
+                    nutritionRes.data.data.forEach(n => {
+                        cache[n.itemId] = { nutrition: n.nutrition, isHealthy: n.isHealthy };
+                    });
+                    setNutritionData(cache);
+
+                    // Save to localStorage
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        data: cache,
+                        timestamp: Date.now()
+                    }));
+                } catch (aiError) {
+                    console.log('AI nutrition unavailable, using estimates');
+                }
 
             } catch (error) {
                 toast.error('Failed to load outlet');
@@ -53,6 +144,47 @@ const Outlet = () => {
 
     const formatPrice = (price) => `₹${(price / 100).toFixed(0)}`;
 
+    // Add nutrition data to items (from AI or fallback)
+    const menuWithNutrition = useMemo(() => {
+        const result = {};
+        Object.keys(menu).forEach(category => {
+            result[category] = menu[category].map(item => {
+                // Check AI cache first
+                if (nutritionData[item._id]) {
+                    return { ...item, ...nutritionData[item._id] };
+                }
+                // Check if item already has nutrition from DB
+                if (item.nutrition?.calories) return item;
+                // Fallback to estimates
+                const fallback = estimateFallbackNutrition(item);
+                return { ...item, ...fallback };
+            });
+        });
+        return result;
+    }, [menu, nutritionData]);
+
+    // Filter menu items by search and healthy filter
+    const getFilteredItems = () => {
+        let items;
+        if (!searchQuery) {
+            items = menuWithNutrition[activeCategory] || [];
+        } else {
+            items = Object.values(menuWithNutrition).flat().filter(item =>
+                item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // Apply healthy filter
+        if (healthyOnly) {
+            items = items.filter(item => item.isHealthy);
+        }
+
+        return items;
+    };
+
+    const filteredItems = getFilteredItems();
+
     if (loading) {
         return (
             <div className="loading-screen">
@@ -64,21 +196,6 @@ const Outlet = () => {
     if (!outlet) {
         return null;
     }
-
-    // Filter menu items by search
-    const getFilteredItems = () => {
-        if (!searchQuery) {
-            return menu[activeCategory] || [];
-        }
-
-        const allItems = Object.values(menu).flat();
-        return allItems.filter(item =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    };
-
-    const filteredItems = getFilteredItems();
 
     return (
         <div style={{ paddingBottom: itemCount > 0 ? 100 : 20 }}>
@@ -148,14 +265,29 @@ const Outlet = () => {
 
             <div className="container">
                 {/* Search */}
-                <input
-                    type="text"
-                    className="input"
-                    placeholder="Search menu..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ marginBottom: 'var(--space-md)' }}
-                />
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+                    <input
+                        type="text"
+                        className="input"
+                        placeholder="Search menu..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ flex: 1 }}
+                    />
+                    <button
+                        onClick={() => setHealthyOnly(!healthyOnly)}
+                        className={`btn ${healthyOnly ? 'btn-primary' : 'btn-ghost'}`}
+                        style={{
+                            padding: '12px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-xs)'
+                        }}
+                    >
+                        <Leaf size={18} />
+                        Healthy
+                    </button>
+                </div>
 
                 {/* Category Tabs */}
                 {!searchQuery && (
@@ -203,7 +335,27 @@ const Outlet = () => {
                                             {item.tags?.includes('bestseller') && (
                                                 <span className="badge badge-primary">Bestseller</span>
                                             )}
+                                            {item.isHealthy && (
+                                                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Leaf size={10} /> Healthy
+                                                </span>
+                                            )}
                                         </div>
+
+                                        {/* Nutrition Info */}
+                                        {item.nutrition && (
+                                            <div style={{
+                                                display: 'flex',
+                                                gap: 'var(--space-md)',
+                                                marginTop: 'var(--space-xs)',
+                                                fontSize: 'var(--font-size-xs)',
+                                                color: 'var(--text-muted)'
+                                            }}>
+                                                <span>🔥 {item.nutrition.calories} cal</span>
+                                                <span>💪 {item.nutrition.protein}g protein</span>
+                                                <span>🍞 {item.nutrition.carbs}g carbs</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-sm)' }}>

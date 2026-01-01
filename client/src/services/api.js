@@ -97,3 +97,10 @@ export const paymentsAPI = {
     createOrder: (orderId) => api.post('/payments/create-order', { orderId }),
     verify: (data) => api.post('/payments/verify', data)
 };
+
+export const analyzeAPI = {
+    getNutrition: (itemName, description, isVeg) =>
+        api.post('/analyze/nutrition', { itemName, description, isVeg }),
+    batchNutrition: (items) =>
+        api.post('/analyze/nutrition/batch', { items })
+};
