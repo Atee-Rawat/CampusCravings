@@ -222,4 +222,47 @@ router.post('/login-check', [
     }
 });
 
+// @route   POST /api/auth/dev-login
+// @desc    Development login - skip OTP and login directly (DEV ONLY)
+// @access  Public (development only)
+router.post('/dev-login', [
+    body('identifier').notEmpty().withMessage('Phone or email is required'),
+    validate
+], async (req, res) => {
+    try {
+        const { identifier } = req.body;
+
+        // Find user by email or phone
+        const user = await User.findOne({
+            $or: [{ email: identifier }, { phone: identifier }]
+        }).populate('university');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'No account found with this email/phone'
+            });
+        }
+
+        if (!user.isVerified) {
+            // Auto-verify for dev
+            user.isVerified = true;
+            await user.save();
+        }
+
+        res.json({
+            success: true,
+            message: 'Dev login successful',
+            data: user
+        });
+
+    } catch (error) {
+        console.error('Dev login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Dev login failed'
+        });
+    }
+});
+
 module.exports = router;

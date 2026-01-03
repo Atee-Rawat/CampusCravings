@@ -24,10 +24,9 @@ const Login = () => {
             const result = await checkUser(identifier);
 
             if (result.success) {
-                // TODO: Implement OTP flow
-                toast.success('Account found! OTP verification coming soon.');
-                // For now, use dev login
-                await devLogin();
+                // For dev: login as this specific user (skip OTP)
+                await devLogin(identifier);
+                toast.success(`Welcome back!`);
                 navigate('/');
             }
         } catch (error) {
@@ -123,6 +122,16 @@ const Login = () => {
                     style={{ color: 'var(--primary-500)', fontWeight: 600 }}
                 >
                     Register
+                </Link>
+            </p>
+
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 'var(--space-lg)', fontSize: 'var(--font-size-sm)' }}>
+                Are you an outlet owner?{' '}
+                <Link
+                    to="/admin/login"
+                    style={{ color: 'var(--secondary-500)', fontWeight: 600 }}
+                >
+                    Admin Login
                 </Link>
             </p>
 

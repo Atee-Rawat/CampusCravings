@@ -510,4 +510,291 @@ router.get('/menu', verifyOutletAdmin, async (req, res) => {
     }
 });
 
+// ============================================
+// ANALYTICS ROUTES
+// ============================================
+
+// @route   GET /api/admin/analytics
+// @desc    Get analytics data for different time periods
+// @access  Private (Outlet Admin)
+router.get('/analytics', verifyOutletAdmin, async (req, res) => {
+    try {
+        const { period = 'week' } = req.query;
+
+        const now = new Date();
+        let startDate, previousStartDate, previousEndDate;
+
+        // Calculate date ranges based on period
+        switch (period) {
+            case 'week':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                previousStartDate = new Date(startDate);
+                previousStartDate.setDate(startDate.getDate() - 7);
+                previousEndDate = new Date(startDate);
+                break;
+            case 'month':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 1);
+                previousStartDate = new Date(startDate);
+                previousStartDate.setMonth(startDate.getMonth() - 1);
+                previousEndDate = new Date(startDate);
+                break;
+            case 'year':
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+                previousStartDate = new Date(startDate);
+                previousStartDate.setFullYear(startDate.getFullYear() - 1);
+                previousEndDate = new Date(startDate);
+                break;
+            default:
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+        }
+
+        startDate.setHours(0, 0, 0, 0);
+
+        // Current period orders
+        const orders = await Order.find({
+            outlet: req.outlet._id,
+            createdAt: { $gte: startDate },
+            'payment.status': 'paid',
+            status: { $ne: 'cancelled' }
+        });
+
+        // Previous period orders for comparison
+        const previousOrders = await Order.find({
+            outlet: req.outlet._id,
+            createdAt: { $gte: previousStartDate, $lt: previousEndDate },
+            'payment.status': 'paid',
+            status: { $ne: 'cancelled' }
+        });
+
+        // Calculate totals
+        const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+        const previousRevenue = previousOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+        const totalOrders = orders.length;
+        const previousOrderCount = previousOrders.length;
+
+        // Revenue change percentage
+        const revenueChange = previousRevenue > 0
+            ? Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 100)
+            : 0;
+        const ordersChange = previousOrderCount > 0
+            ? Math.round(((totalOrders - previousOrderCount) / previousOrderCount) * 100)
+            : 0;
+
+        // Daily breakdown for chart
+        const dailyData = {};
+        orders.forEach(order => {
+            const dateKey = order.createdAt.toISOString().split('T')[0];
+            if (!dailyData[dateKey]) {
+                dailyData[dateKey] = { revenue: 0, orders: 0 };
+            }
+            dailyData[dateKey].revenue += order.totalAmount;
+            dailyData[dateKey].orders += 1;
+        });
+
+        // Convert to array and sort by date
+        const chartData = Object.entries(dailyData)
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Top selling items
+        const itemSales = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                const key = item.menuItem?.toString() || item.name;
+                if (!itemSales[key]) {
+                    itemSales[key] = { name: item.name, quantity: 0, revenue: 0 };
+                }
+                itemSales[key].quantity += item.quantity;
+                itemSales[key].revenue += item.price * item.quantity;
+            });
+        });
+
+        const topItems = Object.values(itemSales)
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 10);
+
+        res.json({
+            success: true,
+            data: {
+                period,
+                summary: {
+                    totalRevenue,
+                    previousRevenue,
+                    revenueChange,
+                    totalOrders,
+                    previousOrderCount,
+                    ordersChange,
+                    avgOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0
+                },
+                chartData,
+                topItems
+            }
+        });
+
+    } catch (error) {
+        console.error('Analytics error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to load analytics'
+        });
+    }
+});
+
+// ============================================
+// COUPON ROUTES
+// ============================================
+const Coupon = require('../models/Coupon');
+
+// @route   GET /api/admin/coupons
+// @desc    Get all coupons for the outlet
+// @access  Private (Outlet Admin)
+router.get('/coupons', verifyOutletAdmin, async (req, res) => {
+    try {
+        const coupons = await Coupon.find({ outlet: req.outlet._id }).sort('-createdAt');
+
+        res.json({
+            success: true,
+            count: coupons.length,
+            data: coupons
+        });
+
+    } catch (error) {
+        console.error('Coupons fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch coupons'
+        });
+    }
+});
+
+// @route   POST /api/admin/coupons
+// @desc    Create a new coupon
+// @access  Private (Outlet Admin)
+router.post('/coupons', verifyOutletAdmin, [
+    body('code').trim().notEmpty().withMessage('Coupon code is required'),
+    body('discountType').isIn(['percentage', 'flat']).withMessage('Invalid discount type'),
+    body('discountValue').isInt({ min: 1 }).withMessage('Discount value must be at least 1'),
+    validate
+], async (req, res) => {
+    try {
+        const { code, description, discountType, discountValue, minOrderAmount, maxDiscount, usageLimit, expiresAt } = req.body;
+
+        // Check if code already exists for this outlet
+        const existing = await Coupon.findOne({ outlet: req.outlet._id, code: code.toUpperCase() });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coupon code already exists'
+            });
+        }
+
+        const coupon = await Coupon.create({
+            outlet: req.outlet._id,
+            code: code.toUpperCase(),
+            description,
+            discountType,
+            discountValue,
+            minOrderAmount: minOrderAmount || 0,
+            maxDiscount: discountType === 'percentage' ? maxDiscount : null,
+            usageLimit: usageLimit || null,
+            expiresAt: expiresAt ? new Date(expiresAt) : null
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Coupon created',
+            data: coupon
+        });
+
+    } catch (error) {
+        console.error('Coupon create error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create coupon'
+        });
+    }
+});
+
+// @route   PUT /api/admin/coupons/:id
+// @desc    Update a coupon
+// @access  Private (Outlet Admin)
+router.put('/coupons/:id', verifyOutletAdmin, async (req, res) => {
+    try {
+        const allowedUpdates = ['description', 'discountValue', 'minOrderAmount', 'maxDiscount', 'usageLimit', 'expiresAt', 'isActive'];
+        const updates = {};
+
+        allowedUpdates.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        // Handle date conversion
+        if (updates.expiresAt) {
+            updates.expiresAt = new Date(updates.expiresAt);
+        }
+
+        const coupon = await Coupon.findOneAndUpdate(
+            { _id: req.params.id, outlet: req.outlet._id },
+            updates,
+            { new: true }
+        );
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Coupon updated',
+            data: coupon
+        });
+
+    } catch (error) {
+        console.error('Coupon update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update coupon'
+        });
+    }
+});
+
+// @route   DELETE /api/admin/coupons/:id
+// @desc    Delete a coupon
+// @access  Private (Outlet Admin)
+router.delete('/coupons/:id', verifyOutletAdmin, async (req, res) => {
+    try {
+        const coupon = await Coupon.findOneAndDelete({
+            _id: req.params.id,
+            outlet: req.outlet._id
+        });
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Coupon deleted'
+        });
+
+    } catch (error) {
+        console.error('Coupon delete error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete coupon'
+        });
+    }
+});
+
 module.exports = router;

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, LogOut, Store } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const AdminLayout = () => {
@@ -25,6 +25,18 @@ const AdminLayout = () => {
         localStorage.removeItem('adminOutlet');
         navigate('/admin/login');
     };
+
+    const navLinkStyle = ({ isActive }) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-sm)',
+        padding: 'var(--space-md)',
+        borderRadius: 'var(--radius-md)',
+        marginBottom: 'var(--space-xs)',
+        background: isActive ? 'var(--primary-500)' : 'transparent',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        transition: 'all var(--transition-fast)'
+    });
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -65,44 +77,38 @@ const AdminLayout = () => {
                             <Store size={20} />
                             <span style={{ fontWeight: 600 }}>{outlet.name}</span>
                         </div>
+                        {outlet.university && (
+                            <p style={{
+                                fontSize: 'var(--font-size-xs)',
+                                color: 'var(--text-muted)',
+                                marginTop: 'var(--space-xs)',
+                                marginLeft: 28
+                            }}>
+                                {outlet.university.name || outlet.university}
+                            </p>
+                        )}
                     </div>
                 )}
 
                 <nav style={{ flex: 1 }}>
-                    <NavLink
-                        to="/admin/dashboard"
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-sm)',
-                            padding: 'var(--space-md)',
-                            borderRadius: 'var(--radius-md)',
-                            marginBottom: 'var(--space-xs)',
-                            background: isActive ? 'var(--primary-500)' : 'transparent',
-                            color: isActive ? 'white' : 'var(--text-secondary)',
-                            transition: 'all var(--transition-fast)'
-                        })}
-                    >
+                    <NavLink to="/admin/dashboard" style={navLinkStyle}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
                     </NavLink>
 
-                    <NavLink
-                        to="/admin/menu"
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-sm)',
-                            padding: 'var(--space-md)',
-                            borderRadius: 'var(--radius-md)',
-                            marginBottom: 'var(--space-xs)',
-                            background: isActive ? 'var(--primary-500)' : 'transparent',
-                            color: isActive ? 'white' : 'var(--text-secondary)',
-                            transition: 'all var(--transition-fast)'
-                        })}
-                    >
+                    <NavLink to="/admin/menu" style={navLinkStyle}>
                         <UtensilsCrossed size={20} />
                         <span>Menu</span>
+                    </NavLink>
+
+                    <NavLink to="/admin/analytics" style={navLinkStyle}>
+                        <BarChart3 size={20} />
+                        <span>Analytics</span>
+                    </NavLink>
+
+                    <NavLink to="/admin/coupons" style={navLinkStyle}>
+                        <Tag size={20} />
+                        <span>Coupons</span>
                     </NavLink>
                 </nav>
 

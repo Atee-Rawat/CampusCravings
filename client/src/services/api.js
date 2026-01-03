@@ -12,9 +12,23 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        // Don't override if Authorization header is already set manually
+        if (config.headers.Authorization) {
+            return config;
+        }
+
+        // Use adminToken for admin routes, regular token otherwise
+        const requestUrl = config.url || '';
+        if (requestUrl.startsWith('/admin')) {
+            const adminToken = localStorage.getItem('adminToken');
+            if (adminToken) {
+                config.headers.Authorization = `Bearer ${adminToken}`;
+            }
+        } else {
+            const token = localStorage.getItem('token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },
@@ -30,11 +44,27 @@ api.interceptors.response.use(
         if (error.response) {
             // Server responded with error
             const { status, data } = error.response;
+            const requestUrl = error.config?.url || '';
 
             if (status === 401) {
-                // Unauthorized - clear token and redirect to login
-                localStorage.removeItem('token');
-                window.location.href = '/login';
+                // Don't redirect if this is a login attempt (let the login page handle it)
+                if (requestUrl.includes('/login')) {
+                    return Promise.reject({
+                        status,
+                        message: data.message || 'Invalid credentials',
+                        errors: data.errors
+                    });
+                }
+
+                // Check if this is an admin route
+                if (requestUrl.startsWith('/admin')) {
+                    localStorage.removeItem('adminToken');
+                    localStorage.removeItem('adminOutlet');
+                    window.location.href = '/admin/login';
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
             }
 
             // Return error message from server

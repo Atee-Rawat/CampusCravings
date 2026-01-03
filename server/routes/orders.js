@@ -189,4 +189,55 @@ router.get('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// @route   POST /api/orders/:id/dev-pay
+// @desc    Development only - simulate payment success
+// @access  Private (Development only)
+router.post('/:id/dev-pay', verifyToken, async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            user: req.user._id,
+            'payment.status': 'pending'
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found or already paid'
+            });
+        }
+
+        // Simulate payment
+        order.payment = {
+            status: 'paid',
+            method: 'dev-bypass',
+            paidAt: new Date(),
+            transactionId: `DEV-${Date.now()}`
+        };
+        await order.save();
+
+        // Emit socket event for new order to admin
+        const io = req.app.get('io');
+        if (io) {
+            await order.populate('user', 'fullName phone');
+            io.to(`outlet-${order.outlet}`).emit('new-order', { order });
+        }
+
+        await order.populate('outlet', 'name slug');
+
+        res.json({
+            success: true,
+            message: 'Dev payment successful',
+            data: order
+        });
+
+    } catch (error) {
+        console.error('Dev payment error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Dev payment failed'
+        });
+    }
+});
+
 module.exports = router;

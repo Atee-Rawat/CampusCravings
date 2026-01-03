@@ -27,7 +27,7 @@ router.post('/nutrition', verifyToken, async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const prompt = `Analyze the following food item and provide nutritional information. Return ONLY a valid JSON object with no markdown formatting, no code blocks, just the raw JSON.
 
@@ -104,7 +104,7 @@ router.post('/nutrition/batch', verifyToken, async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         // Create a batch prompt for efficiency
         const itemsList = items.map((item, idx) =>

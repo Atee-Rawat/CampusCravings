@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, AlertCircle } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
-import { ordersAPI, paymentsAPI } from '../../services/api';
+import api, { ordersAPI, paymentsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const Checkout = () => {
@@ -96,11 +96,12 @@ const Checkout = () => {
         }
     };
 
-    // Demo payment for testing
+    // Demo payment for testing (bypasses Razorpay)
     const handleDemoPayment = async () => {
         setLoading(true);
 
         try {
+            // 1. Create order
             const orderData = {
                 outletId: outlet._id,
                 items: items.map(item => ({
@@ -113,8 +114,10 @@ const Checkout = () => {
             const orderRes = await ordersAPI.create(orderData);
             const order = orderRes.data.data;
 
-            // Simulate payment success
-            toast.success('Demo payment successful!');
+            // 2. Simulate payment (dev mode - bypasses Razorpay)
+            await api.post(`/orders/${order._id}/dev-pay`);
+
+            toast.success('Order placed successfully!');
             clearCart();
             navigate(`/order/${order._id}`);
 
