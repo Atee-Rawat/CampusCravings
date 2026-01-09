@@ -15,10 +15,20 @@ const verifyToken = async (req, res, next) => {
 
         const token = authHeader.split(' ')[1];
 
-        // For development, allow a mock token
-        if (process.env.NODE_ENV === 'development' && token === 'dev-token') {
-            // Find first user for development
+        // For development, allow mock tokens
+        if (token === 'dev-token') {
+            // Find first user for development (legacy)
             const user = await User.findOne().populate('university');
+            if (user) {
+                req.user = user;
+                return next();
+            }
+        }
+
+        // Dev token with specific user ID: dev-user-{userId}
+        if (token.startsWith('dev-user-')) {
+            const userId = token.replace('dev-user-', '');
+            const user = await User.findById(userId).populate('university');
             if (user) {
                 req.user = user;
                 return next();
@@ -70,10 +80,11 @@ const optionalAuth = async (req, res, next) => {
     }
 };
 
-// Verify outlet admin
+// Verify outlet admin (uses JWT, not Firebase)
 const verifyOutletAdmin = async (req, res, next) => {
     try {
         const { Outlet } = require('../models');
+        const jwt = require('jsonwebtoken');
 
         const authHeader = req.headers.authorization;
 
@@ -96,11 +107,11 @@ const verifyOutletAdmin = async (req, res, next) => {
             }
         }
 
-        // Verify Firebase token
-        const decodedToken = await admin.auth().verifyIdToken(token);
+        // Verify JWT token (created by admin login)
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
 
-        // Find outlet by owner's Firebase UID
-        const outlet = await Outlet.findOne({ 'owner.firebaseUid': decodedToken.uid }).populate('university');
+        // Find outlet by ID from token
+        const outlet = await Outlet.findById(decoded.outletId).populate('university');
 
         if (!outlet) {
             return res.status(401).json({
@@ -117,7 +128,6 @@ const verifyOutletAdmin = async (req, res, next) => {
         }
 
         req.outlet = outlet;
-        req.firebaseUser = decodedToken;
         next();
 
     } catch (error) {

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf, Tag } from 'lucide-react';
 import { outletsAPI, menuAPI, analyzeAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 // Fallback nutrition estimator (used if AI fails)
 const estimateFallbackNutrition = (item) => {
@@ -65,6 +66,7 @@ const Outlet = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [healthyOnly, setHealthyOnly] = useState(false);
+    const [coupons, setCoupons] = useState([]);
 
     useEffect(() => {
         const fetchOutletAndMenu = async () => {
@@ -122,6 +124,14 @@ const Outlet = () => {
                     }));
                 } catch (aiError) {
                     console.log('AI nutrition unavailable, using estimates');
+                }
+
+                // Fetch available coupons for this outlet
+                try {
+                    const couponsRes = await api.get(`/outlets/${slug}/coupons`);
+                    setCoupons(couponsRes.data.data || []);
+                } catch (couponError) {
+                    console.log('Coupons unavailable');
                 }
 
             } catch (error) {
@@ -264,6 +274,44 @@ const Outlet = () => {
             </div>
 
             <div className="container">
+                {/* Coupons Banner */}
+                {coupons.length > 0 && (
+                    <div style={{
+                        marginBottom: 'var(--space-md)',
+                        padding: 'var(--space-md)',
+                        background: 'linear-gradient(135deg, var(--primary-600), var(--secondary-600))',
+                        borderRadius: 'var(--radius-lg)',
+                        color: 'white'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+                            <Tag size={18} />
+                            <span style={{ fontWeight: 600 }}>Available Offers</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 'var(--space-sm)', overflowX: 'auto', paddingBottom: 4 }}>
+                            {coupons.map(coupon => (
+                                <div
+                                    key={coupon._id}
+                                    style={{
+                                        padding: 'var(--space-sm) var(--space-md)',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        borderRadius: 'var(--radius-md)',
+                                        whiteSpace: 'nowrap',
+                                        fontSize: 'var(--font-size-sm)'
+                                    }}
+                                >
+                                    <span style={{ fontWeight: 700 }}>{coupon.code}</span>
+                                    <span style={{ marginLeft: 'var(--space-sm)', opacity: 0.9 }}>
+                                        {coupon.discountType === 'percentage'
+                                            ? `${coupon.discountValue}% off`
+                                            : `₹${coupon.discountValue} off`}
+                                        {coupon.minOrderAmount > 0 && ` on ₹${coupon.minOrderAmount / 100}+`}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Search */}
                 <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
                     <input

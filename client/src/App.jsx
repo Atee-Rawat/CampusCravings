@@ -22,6 +22,8 @@ import Profile from './pages/student/Profile';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import MenuManager from './pages/admin/MenuManager';
+import Analytics from './pages/admin/Analytics';
+import Coupons from './pages/admin/Coupons';
 
 // Loading component
 const LoadingScreen = () => (
@@ -82,6 +84,8 @@ function App() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="menu" element={<MenuManager />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="coupons" element={<Coupons />} />
             </Route>
 
             {/* Protected Student Routes */}
