@@ -74,29 +74,51 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ outlet: 1, status: 1, createdAt: -1 });
 orderSchema.index({ 'payment.razorpayOrderId': 1 });
 
+// Helper function to generate order number
+async function generateOrderNumber(order) {
+    const Outlet = mongoose.model('Outlet');
+    const outlet = await Outlet.findById(order.outlet).populate('university');
+    const uniCode = outlet?.university?.code || 'CC';
+
+    // Get count of ALL orders for this outlet (not just today)
+    // This provides a truly unique, ever-incrementing number
+    const count = await mongoose.model('Order').countDocuments({
+        outlet: order.outlet
+    });
+
+    // Format: CC-DU-001234
+    return `CC-${uniCode}-${String(count + 1).padStart(6, '0')}`;
+}
+
 // Generate order number before saving
 orderSchema.pre('save', async function (next) {
     if (!this.orderNumber) {
-        // Get outlet and university codes
-        const Outlet = mongoose.model('Outlet');
-        const University = mongoose.model('University');
-
-        const outlet = await Outlet.findById(this.outlet).populate('university');
-        const uniCode = outlet?.university?.code || 'CC';
-
-        // Get count for today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const count = await mongoose.model('Order').countDocuments({
-            outlet: this.outlet,
-            createdAt: { $gte: today }
-        });
-
-        // Format: CC-DU-001234
-        this.orderNumber = `CC-${uniCode}-${String(count + 1).padStart(6, '0')}`;
+        this.orderNumber = await generateOrderNumber(this);
     }
     next();
+});
+
+// Handle duplicate key error with retry logic
+orderSchema.post('save', async function (error, doc, next) {
+    if (error.name === 'MongoServerError' && error.code === 11000 && error.keyPattern?.orderNumber) {
+        // Duplicate order number - regenerate with timestamp suffix
+        const Outlet = mongoose.model('Outlet');
+        const outlet = await Outlet.findById(doc.outlet).populate('university');
+        const uniCode = outlet?.university?.code || 'CC';
+
+        // Use timestamp for uniqueness
+        const timestamp = Date.now().toString().slice(-6);
+        doc.orderNumber = `CC-${uniCode}-${timestamp}`;
+
+        try {
+            await doc.save();
+            next();
+        } catch (retryError) {
+            next(retryError);
+        }
+    } else {
+        next(error);
+    }
 });
 
 // Method to accept order and start timer

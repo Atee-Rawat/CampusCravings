@@ -9,25 +9,25 @@
   --primary-600: #E85A2A;
   --primary-400: #FF8559;
   --primary-300: #FFA07A;
-  
+
   /* Secondary - Deep Teal */
   --secondary-500: #00B4A2;
   --secondary-600: #009E8E;
   --secondary-400: #33C4B5;
-  
+
   /* Neutrals - Dark Mode */
   --bg-primary: #0D0D0D;
   --bg-secondary: #1A1A1A;
   --bg-card: #242424;
   --bg-elevated: #2D2D2D;
   --bg-input: #333333;
-  
+
   /* Text */
   --text-primary: #FFFFFF;
   --text-secondary: #A0A0A0;
   --text-muted: #666666;
   --text-inverse: #0D0D0D;
-  
+
   /* Semantic */
   --success: #00E676;
   --success-bg: rgba(0, 230, 118, 0.1);
@@ -35,18 +35,18 @@
   --warning-bg: rgba(255, 214, 0, 0.1);
   --error: #FF5252;
   --error-bg: rgba(255, 82, 82, 0.1);
-  
+
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.05);
   --border-light: rgba(255, 255, 255, 0.1);
   --border-medium: rgba(255, 255, 255, 0.2);
-  
+
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 4px 20px rgba(255, 107, 53, 0.3);
-  
+
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -54,19 +54,19 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
   --transition-slow: 300ms ease;
-  
+
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-size-xs: 0.75rem;
@@ -77,7 +77,7 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 2rem;
   --font-size-4xl: 2.5rem;
-  
+
   /* Z-index layers */
   --z-dropdown: 100;
   --z-sticky: 200;
@@ -85,10 +85,58 @@
   --z-toast: 400;
 }
 
+/* Light Mode Theme */
+[data-theme="light"] {
+  /* Primary - Electric Orange (same) */
+  --primary-500: #FF6B35;
+  --primary-600: #E85A2A;
+  --primary-400: #FF8559;
+  --primary-300: #FFA07A;
+
+  /* Secondary - Deep Teal (same) */
+  --secondary-500: #00B4A2;
+  --secondary-600: #009E8E;
+  --secondary-400: #33C4B5;
+
+  /* Neutrals - Light Mode */
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #F0F2F5;
+  --bg-input: #FFFFFF;
+
+  /* Text */
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #FFFFFF;
+
+  /* Semantic */
+  --success: #00C853;
+  --success-bg: rgba(0, 200, 83, 0.1);
+  --warning: #FF9800;
+  --warning-bg: rgba(255, 152, 0, 0.1);
+  --error: #F44336;
+  --error-bg: rgba(244, 67, 54, 0.1);
+
+  /* Borders */
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-light: rgba(0, 0, 0, 0.1);
+  --border-medium: rgba(0, 0, 0, 0.2);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+  --shadow-glow: 0 4px 20px rgba(255, 107, 53, 0.25);
+}
+
 /* ========================================
    Reset & Base Styles
    ======================================== */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -115,12 +163,19 @@ body {
   flex-direction: column;
 }
 
-img, picture, video, canvas, svg {
+img,
+picture,
+video,
+canvas,
+svg {
   display: block;
   max-width: 100%;
 }
 
-input, button, textarea, select {
+input,
+button,
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -136,40 +191,99 @@ a {
   text-decoration: none;
 }
 
-ul, ol {
+ul,
+ol {
   list-style: none;
 }
 
 /* ========================================
    Typography
    ======================================== */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 700;
   line-height: 1.2;
 }
 
-h1 { font-size: var(--font-size-3xl); }
-h2 { font-size: var(--font-size-2xl); }
-h3 { font-size: var(--font-size-xl); }
-h4 { font-size: var(--font-size-lg); }
+h1 {
+  font-size: var(--font-size-3xl);
+}
 
-.text-xs { font-size: var(--font-size-xs); }
-.text-sm { font-size: var(--font-size-sm); }
-.text-base { font-size: var(--font-size-base); }
-.text-lg { font-size: var(--font-size-lg); }
-.text-xl { font-size: var(--font-size-xl); }
-.text-2xl { font-size: var(--font-size-2xl); }
-.text-3xl { font-size: var(--font-size-3xl); }
+h2 {
+  font-size: var(--font-size-2xl);
+}
 
-.text-muted { color: var(--text-muted); }
-.text-secondary { color: var(--text-secondary); }
-.text-primary-color { color: var(--primary-500); }
-.text-success { color: var(--success); }
-.text-error { color: var(--error); }
+h3 {
+  font-size: var(--font-size-xl);
+}
 
-.font-medium { font-weight: 500; }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: 700; }
+h4 {
+  font-size: var(--font-size-lg);
+}
+
+.text-xs {
+  font-size: var(--font-size-xs);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-base {
+  font-size: var(--font-size-base);
+}
+
+.text-lg {
+  font-size: var(--font-size-lg);
+}
+
+.text-xl {
+  font-size: var(--font-size-xl);
+}
+
+.text-2xl {
+  font-size: var(--font-size-2xl);
+}
+
+.text-3xl {
+  font-size: var(--font-size-3xl);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-primary-color {
+  color: var(--primary-500);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-error {
+  color: var(--error);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-bold {
+  font-weight: 700;
+}
 
 /* ========================================
    Layout Utilities
@@ -181,18 +295,49 @@ h4 { font-size: var(--font-size-lg); }
   padding: 0 var(--space-md);
 }
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.gap-xs { gap: var(--space-xs); }
-.gap-sm { gap: var(--space-sm); }
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
+.flex {
+  display: flex;
+}
 
-.grid { display: grid; }
-.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-xs {
+  gap: var(--space-xs);
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
 
 /* ========================================
    Components: Buttons
@@ -524,20 +669,23 @@ h4 { font-size: var(--font-size-lg); }
    Components: Loading States
    ======================================== */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-card) 25%,
-    var(--bg-elevated) 50%,
-    var(--bg-card) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--bg-card) 25%,
+      var(--bg-elevated) 50%,
+      var(--bg-card) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
   border-radius: var(--radius-sm);
 }
 
 @keyframes skeleton-loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .spinner {
@@ -550,7 +698,9 @@ h4 { font-size: var(--font-size-lg); }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-screen {
@@ -596,8 +746,13 @@ h4 { font-size: var(--font-size-lg); }
    Animations
    ======================================== */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -605,6 +760,7 @@ h4 { font-size: var(--font-size-lg); }
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -612,13 +768,27 @@ h4 { font-size: var(--font-size-lg); }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .animate-fade-in {

@@ -174,4 +174,56 @@ router.post('/register', [
     }
 });
 
+// @route   GET /api/outlets/:slug/coupons
+// @desc    Get active coupons for an outlet (for students)
+// @access  Private
+const Coupon = require('../models/Coupon');
+
+router.get('/:slug/coupons', verifyToken, async (req, res) => {
+    try {
+        const outlet = await Outlet.findOne({
+            slug: req.params.slug,
+            university: req.user.university._id,
+            isVerified: true
+        });
+
+        if (!outlet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Outlet not found'
+            });
+        }
+
+        // Get only active AND valid coupons
+        const now = new Date();
+        const coupons = await Coupon.find({
+            outlet: outlet._id,
+            isActive: true,
+            $or: [
+                { expiresAt: null },
+                { expiresAt: { $gt: now } }
+            ]
+        }).select('code description discountType discountValue minOrderAmount maxDiscount');
+
+        // Filter by usage limit in memory (complex query)
+        const validCoupons = coupons.filter(c =>
+            !c.usageLimit || c.usedCount < c.usageLimit
+        );
+
+        res.json({
+            success: true,
+            count: validCoupons.length,
+            data: validCoupons
+        });
+
+    } catch (error) {
+        console.error('Coupons fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch coupons'
+        });
+    }
+});
+
 module.exports = router;
+

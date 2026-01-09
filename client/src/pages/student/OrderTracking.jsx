@@ -124,6 +124,9 @@ const OrderTracking = () => {
 
     // Get status info
     const getStatusInfo = () => {
+        // Check if order is delayed (timer finished but still preparing)
+        const isDelayed = remainingSeconds === 0 && ['accepted', 'preparing'].includes(order?.status);
+
         switch (order?.status) {
             case 'pending':
                 return {
@@ -133,6 +136,13 @@ const OrderTracking = () => {
                 };
             case 'accepted':
             case 'preparing':
+                if (isDelayed) {
+                    return {
+                        label: 'Running Late',
+                        color: 'var(--warning)',
+                        description: "Sorry, your order is getting a little delayed. The outlet is working on it!"
+                    };
+                }
                 return {
                     label: 'Preparing',
                     color: 'var(--secondary-500)',
@@ -179,6 +189,7 @@ const OrderTracking = () => {
     const progress = getProgress();
     const isActive = ['accepted', 'preparing'].includes(order.status);
     const isReady = order.status === 'ready';
+    const isDelayed = remainingSeconds === 0 && isActive;
     const circumference = 2 * Math.PI * 90;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -254,6 +265,54 @@ const OrderTracking = () => {
                 <p style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-sm)' }}>
                     {statusInfo.description}
                 </p>
+
+                {/* Delay Notification with Contact */}
+                {isDelayed && order.outlet?.contact?.phone && (
+                    <div style={{
+                        marginTop: 'var(--space-lg)',
+                        padding: 'var(--space-md)',
+                        background: 'var(--warning-bg)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--warning)',
+                        textAlign: 'center'
+                    }}>
+                        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)' }}>
+                            Need help? Contact the outlet directly:
+                        </p>
+                        <a
+                            href={`tel:${order.outlet.contact.phone}`}
+                            className="btn btn-secondary"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-sm)' }}
+                        >
+                            <Phone size={18} />
+                            Call {order.outlet.contact.phone}
+                        </a>
+                    </div>
+                )}
+
+                {/* Order Ready Celebration */}
+                {isReady && (
+                    <div style={{
+                        marginTop: 'var(--space-lg)',
+                        padding: 'var(--space-md)',
+                        background: 'var(--success-bg)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--success)',
+                        textAlign: 'center'
+                    }}>
+                        <p style={{
+                            fontSize: 'var(--font-size-lg)',
+                            fontWeight: 700,
+                            color: 'var(--success)',
+                            marginBottom: 'var(--space-xs)'
+                        }}>
+                            🎉 Your order is ready!
+                        </p>
+                        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
+                            Please come to collect it at the outlet counter.
+                        </p>
+                    </div>
+                )}
 
                 {/* Order Number */}
                 <p style={{

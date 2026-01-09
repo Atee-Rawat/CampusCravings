@@ -128,14 +128,27 @@ export const AuthProvider = ({ children }) => {
         return response.data;
     };
 
-    // Login with dev token (for development only)
-    const devLogin = async () => {
-        localStorage.setItem('token', 'dev-token');
-        setToken('dev-token');
+    // Login with dev mode (for development only - skips OTP)
+    const devLogin = async (identifier = null) => {
+        if (identifier) {
+            // Login as specific user
+            const response = await api.post('/auth/dev-login', { identifier });
+            const userData = response.data.data;
 
-        const response = await api.get('/auth/me');
-        setUser(response.data.data);
-        return response.data;
+            // Store a dev token with user ID
+            const devToken = `dev-user-${userData._id}`;
+            localStorage.setItem('token', devToken);
+            setToken(devToken);
+            setUser(userData);
+            return response.data;
+        } else {
+            // Fallback to old behavior (first user)
+            localStorage.setItem('token', 'dev-token');
+            setToken('dev-token');
+            const response = await api.get('/auth/me');
+            setUser(response.data.data);
+            return response.data;
+        }
     };
 
     // Logout

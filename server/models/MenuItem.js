@@ -49,7 +49,17 @@ const menuItemSchema = new mongoose.Schema({
     tags: [{
         type: String,
         trim: true
-    }]
+    }],
+    // AI-analyzed nutrition data
+    nutrition: {
+        calories: { type: Number, default: null },
+        protein: { type: Number, default: null },  // grams
+        carbs: { type: Number, default: null }     // grams
+    },
+    isHealthy: {
+        type: Boolean,
+        default: null  // null = not yet analyzed
+    }
 }, {
     timestamps: true
 });
