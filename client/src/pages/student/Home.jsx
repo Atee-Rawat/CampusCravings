@@ -48,7 +48,7 @@ const Home = () => {
                     {getGreeting()},
                 </p>
                 <h1 className="greeting">
-                    <span className="greeting-name">{firstName}</span> 👋
+                    <span className="gradient-text">{firstName}</span> 👋
                 </h1>
                 <p className="text-secondary" style={{ marginTop: 'var(--space-xs)' }}>
                     What would you like to eat today?
@@ -92,12 +92,12 @@ const Home = () => {
                         </p>
                     </div>
                 ) : (
-                    filteredOutlets.map(outlet => (
+                    filteredOutlets.map((outlet, index) => (
                         <Link
                             key={outlet._id}
                             to={`/outlet/${outlet.slug}`}
-                            className="card outlet-card animate-slide-up"
-                            style={{ animationDelay: '100ms' }}
+                            className="card card-glass outlet-card hover-scale animate-slide-up"
+                            style={{ animationDelay: `${index * 50}ms` }}
                         >
                             <div
                                 className="outlet-image"

@@ -129,7 +129,7 @@ const Checkout = () => {
     };
 
     return (
-        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 180 }}>
+        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 140 }}>
             {/* Header */}
             <button
                 onClick={() => navigate(-1)}
@@ -259,8 +259,20 @@ const Checkout = () => {
                 </p>
             </div>
 
-            {/* Payment Button */}
-            <div className="cart-summary">
+            {/* Payment Button - No bottom nav on checkout, so position at bottom: 0 */}
+            <div style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: 'rgba(26, 26, 26, 0.95)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderTop: '1px solid var(--border-light)',
+                padding: 'var(--space-md)',
+                paddingBottom: 'calc(var(--space-md) + env(safe-area-inset-bottom))',
+                zIndex: 250
+            }}>
                 <button
                     className="btn btn-primary btn-block btn-lg"
                     onClick={handleDemoPayment}

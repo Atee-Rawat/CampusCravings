@@ -1,10 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
     const [outlet, setOutlet] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('adminToken');
@@ -26,6 +27,8 @@ const AdminLayout = () => {
         navigate('/admin/login');
     };
 
+    const closeSidebar = () => setSidebarOpen(false);
+
     const navLinkStyle = ({ isActive }) => ({
         display: 'flex',
         alignItems: 'center',
@@ -39,16 +42,24 @@ const AdminLayout = () => {
     });
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <div>
+            {/* Mobile Menu Toggle */}
+            <button
+                className="admin-menu-toggle"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle menu"
+            >
+                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+
+            {/* Overlay for mobile */}
+            <div
+                className={`admin-overlay ${sidebarOpen ? 'open' : ''}`}
+                onClick={closeSidebar}
+            />
+
             {/* Sidebar */}
-            <aside style={{
-                width: 240,
-                background: 'var(--bg-secondary)',
-                borderRight: '1px solid var(--border-subtle)',
-                padding: 'var(--space-md)',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
+            <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
                 <div style={{ marginBottom: 'var(--space-xl)' }}>
                     <h2 style={{
                         fontSize: 'var(--font-size-lg)',
@@ -91,22 +102,22 @@ const AdminLayout = () => {
                 )}
 
                 <nav style={{ flex: 1 }}>
-                    <NavLink to="/admin/dashboard" style={navLinkStyle}>
+                    <NavLink to="/admin/dashboard" style={navLinkStyle} onClick={closeSidebar}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
                     </NavLink>
 
-                    <NavLink to="/admin/menu" style={navLinkStyle}>
+                    <NavLink to="/admin/menu" style={navLinkStyle} onClick={closeSidebar}>
                         <UtensilsCrossed size={20} />
                         <span>Menu</span>
                     </NavLink>
 
-                    <NavLink to="/admin/analytics" style={navLinkStyle}>
+                    <NavLink to="/admin/analytics" style={navLinkStyle} onClick={closeSidebar}>
                         <BarChart3 size={20} />
                         <span>Analytics</span>
                     </NavLink>
 
-                    <NavLink to="/admin/coupons" style={navLinkStyle}>
+                    <NavLink to="/admin/coupons" style={navLinkStyle} onClick={closeSidebar}>
                         <Tag size={20} />
                         <span>Coupons</span>
                     </NavLink>
@@ -129,7 +140,7 @@ const AdminLayout = () => {
             </aside>
 
             {/* Main Content */}
-            <main style={{ flex: 1, padding: 'var(--space-xl)' }}>
+            <main className="admin-main">
                 <Outlet />
             </main>
         </div>
@@ -137,3 +148,4 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
+

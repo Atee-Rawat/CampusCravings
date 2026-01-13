@@ -208,7 +208,7 @@ const Outlet = () => {
     }
 
     return (
-        <div style={{ paddingBottom: itemCount > 0 ? 100 : 20 }}>
+        <div style={{ paddingBottom: itemCount > 0 ? 160 : 20 }}>
             {/* Header with cover image */}
             <div className="menu-header">
                 <div
@@ -453,16 +453,9 @@ const Outlet = () => {
 
             {/* Floating Cart Button */}
             {itemCount > 0 && cartOutlet?._id === outlet._id && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: 'var(--space-lg)',
-                    left: 'var(--space-md)',
-                    right: 'var(--space-md)',
-                    maxWidth: 'calc(480px - var(--space-md) * 2)',
-                    margin: '0 auto'
-                }}>
+                <div className="floating-cart-btn">
                     <button
-                        className="btn btn-primary btn-block"
+                        className="btn btn-primary btn-block btn-pulse"
                         onClick={() => navigate('/cart')}
                         style={{
                             justifyContent: 'space-between',
