@@ -11,7 +11,7 @@ const Layout = () => {
 
     return (
         <div className="app-layout">
-            <main className="main-content">
+            <main className={`main-content ${hideNav ? 'pb-0' : ''}`} style={hideNav ? { paddingBottom: 0 } : {}}>
                 <Outlet />
             </main>
 

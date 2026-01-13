@@ -55,7 +55,7 @@ const Cart = () => {
     }
 
     return (
-        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 180 }}>
+        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 140 }}>
             {/* Header */}
             <div style={{
                 display: 'flex',
