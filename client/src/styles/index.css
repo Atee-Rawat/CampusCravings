@@ -826,6 +826,42 @@ h4 {
 /* ========================================
    Page-specific: Auth Pages
    ======================================== */
+
+/* Student Login - Mobile First (full page, centered) */
+.student-login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  background: var(--bg-primary);
+}
+
+.student-login-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Student Login - Desktop (card layout) */
+@media (min-width: 768px) {
+  .student-login-wrapper {
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1a2e 50%, #16213e 100%);
+    padding: var(--space-lg);
+  }
+
+  .student-login-card {
+    max-width: 440px;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-subtle);
+  }
+}
+
 .auth-page {
   min-height: 100vh;
   display: flex;
