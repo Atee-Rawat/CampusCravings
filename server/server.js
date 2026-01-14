@@ -51,15 +51,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve static files from the React app build
-const clientBuildPath = path.join(__dirname, '../client/dist');
-app.use(express.static(clientBuildPath));
-
-// Handle React routing - serve index.html for all non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
