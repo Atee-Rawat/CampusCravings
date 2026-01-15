@@ -167,6 +167,14 @@ body {
   flex-direction: column;
 }
 
+/* App layout wrapper */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
 img,
 picture,
 video,
@@ -641,8 +649,11 @@ h4 {
 
 /* Main content padding for bottom nav */
 .main-content {
+  flex: 1;
   padding-bottom: var(--bottom-nav-height);
-  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .nav-item {
@@ -947,7 +958,7 @@ h4 {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding-bottom: 80px;
+  padding-bottom: 20px;
 }
 
 .outlet-card {

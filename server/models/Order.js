@@ -23,8 +23,8 @@ const orderSchema = new mongoose.Schema({
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'User is required']
+        ref: 'User'
+        // Not required - offline orders don't have users
     },
     outlet: {
         type: mongoose.Schema.Types.ObjectId,
@@ -61,6 +61,28 @@ const orderSchema = new mongoose.Schema({
     readyAt: Date,
     completedAt: Date,
     cancellationReason: String,
+    // Pickup verification
+    pickupPIN: {
+        type: String,
+        length: 4
+    },
+    pickupToken: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    tokenNumber: {
+        type: Number
+    },
+    // Offline order support
+    isOffline: {
+        type: Boolean,
+        default: false
+    },
+    offlineCustomer: {
+        name: String,
+        phone: String
+    },
     specialInstructions: {
         type: String,
         maxlength: [200, 'Instructions cannot exceed 200 characters']
@@ -73,6 +95,7 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ outlet: 1, status: 1, createdAt: -1 });
 orderSchema.index({ 'payment.razorpayOrderId': 1 });
+orderSchema.index({ outlet: 1, pickupPIN: 1 }); // For pickup verification
 
 // Helper function to generate order number
 async function generateOrderNumber(order) {
@@ -90,11 +113,61 @@ async function generateOrderNumber(order) {
     return `CC-${uniCode}-${String(count + 1).padStart(6, '0')}`;
 }
 
-// Generate order number before saving
+// Generate random 4-digit PIN
+function generatePickupPIN() {
+    return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// Generate unique pickup token (UUID-like)
+function generatePickupToken() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let token = '';
+    for (let i = 0; i < 8; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+}
+
+// Generate daily sequential token number for queue
+async function generateTokenNumber(outletId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const count = await mongoose.model('Order').countDocuments({
+        outlet: outletId,
+        createdAt: { $gte: today },
+        'payment.status': 'paid'
+    });
+
+    return count + 1;
+}
+
+// Generate order number and pickup credentials before saving
 orderSchema.pre('save', async function (next) {
     if (!this.orderNumber) {
         this.orderNumber = await generateOrderNumber(this);
     }
+
+    // Generate pickup credentials when payment is completed
+    if (this.isModified('payment.status') && this.payment.status === 'paid') {
+        if (!this.pickupPIN) {
+            this.pickupPIN = generatePickupPIN();
+        }
+        if (!this.pickupToken) {
+            this.pickupToken = generatePickupToken();
+        }
+        if (!this.tokenNumber) {
+            this.tokenNumber = await generateTokenNumber(this.outlet);
+        }
+    }
+
+    // For offline orders, generate immediately since they're pre-paid
+    if (this.isOffline && !this.pickupPIN) {
+        this.pickupPIN = generatePickupPIN();
+        this.pickupToken = generatePickupToken();
+        this.tokenNumber = await generateTokenNumber(this.outlet);
+    }
+
     next();
 });
 

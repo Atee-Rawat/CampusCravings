@@ -1,7 +1,8 @@
 const admin = require('../config/firebase');
+const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
-// Verify Firebase token middleware
+// Verify token middleware (supports both JWT and Firebase tokens)
 const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -35,22 +36,45 @@ const verifyToken = async (req, res, next) => {
             }
         }
 
-        // Verify Firebase token
-        const decodedToken = await admin.auth().verifyIdToken(token);
+        // Try JWT verification first (for password-based login)
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
 
-        // Find user by Firebase UID
-        const user = await User.findOne({ firebaseUid: decodedToken.uid }).populate('university');
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found'
-            });
+            if (decoded.userId) {
+                const user = await User.findById(decoded.userId).populate('university');
+                if (user) {
+                    req.user = user;
+                    return next();
+                }
+            }
+        } catch (jwtError) {
+            // Not a valid JWT, try Firebase next
         }
 
-        req.user = user;
-        req.firebaseUser = decodedToken;
-        next();
+        // Fallback: Verify Firebase token
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(token);
+
+            // Find user by Firebase UID
+            const user = await User.findOne({ firebaseUid: decodedToken.uid }).populate('university');
+
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            req.user = user;
+            req.firebaseUser = decodedToken;
+            return next();
+        } catch (firebaseError) {
+            console.error('Auth error:', firebaseError.message);
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
 
     } catch (error) {
         console.error('Auth error:', error.message);

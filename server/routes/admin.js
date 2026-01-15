@@ -3,7 +3,10 @@ const router = express.Router();
 const { body } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
 const { validate, verifyOutletAdmin } = require('../middleware');
+const upload = require('../middleware/upload');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const { Order, MenuItem, Outlet, User } = require('../models');
 
 // @route   POST /api/admin/login
@@ -797,4 +800,467 @@ router.delete('/coupons/:id', verifyOutletAdmin, async (req, res) => {
     }
 });
 
+// ============================================
+// QUEUE & VERIFICATION ROUTES
+// ============================================
+
+// @route   GET /api/admin/queue
+// @desc    Get current queue status (ready orders, now serving)
+// @access  Private (Outlet Admin)
+router.get('/queue', verifyOutletAdmin, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Get today's orders with token numbers
+        const orders = await Order.find({
+            outlet: req.outlet._id,
+            createdAt: { $gte: today },
+            'payment.status': 'paid',
+            tokenNumber: { $exists: true }
+        }).select('tokenNumber status orderNumber user pickupPIN')
+            .populate('user', 'fullName')
+            .sort('tokenNumber');
+
+        // Categorize by status
+        const readyTokens = orders
+            .filter(o => o.status === 'ready')
+            .map(o => ({
+                tokenNumber: o.tokenNumber,
+                orderNumber: o.orderNumber,
+                customerName: o.user?.fullName || 'Walk-in'
+            }));
+
+        const preparingTokens = orders
+            .filter(o => ['accepted', 'preparing'].includes(o.status))
+            .map(o => o.tokenNumber);
+
+        const pendingTokens = orders
+            .filter(o => o.status === 'pending')
+            .map(o => o.tokenNumber);
+
+        const completedCount = orders.filter(o => o.status === 'completed').length;
+        const lastTokenNumber = orders.length > 0
+            ? Math.max(...orders.map(o => o.tokenNumber))
+            : 0;
+
+        res.json({
+            success: true,
+            data: {
+                readyTokens,
+                preparingTokens,
+                pendingTokens,
+                completedCount,
+                lastTokenNumber,
+                totalTodayOrders: orders.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Queue fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch queue status'
+        });
+    }
+});
+
+// @route   POST /api/admin/orders/:id/verify
+// @desc    Verify and complete order by PIN or token
+// @access  Private (Outlet Admin)
+router.post('/orders/:id/verify', verifyOutletAdmin, async (req, res) => {
+    try {
+        const { pin, token } = req.body;
+
+        if (!pin && !token) {
+            return res.status(400).json({
+                success: false,
+                message: 'PIN or token is required'
+            });
+        }
+
+        // Build query
+        const query = {
+            _id: req.params.id,
+            outlet: req.outlet._id,
+            status: 'ready'
+        };
+
+        if (pin) {
+            query.pickupPIN = pin;
+        }
+        if (token) {
+            query.pickupToken = token;
+        }
+
+        const order = await Order.findOne(query);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invalid PIN/token or order not ready'
+            });
+        }
+
+        // Complete the order
+        await order.complete();
+
+        // Update user's favorite items if not offline order
+        if (order.user) {
+            const user = await User.findById(order.user);
+            if (user) {
+                for (const item of order.items) {
+                    await user.updateFavorite(item.menuItem);
+                }
+            }
+        }
+
+        // Update outlet stats
+        await Outlet.findByIdAndUpdate(req.outlet._id, {
+            $inc: {
+                'stats.totalOrders': 1,
+                'stats.totalRevenue': order.totalAmount
+            }
+        });
+
+        // Emit socket event
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`order-${order._id}`).emit('order-completed', {
+                orderId: order._id,
+                status: 'completed'
+            });
+            // Broadcast queue update
+            io.to(`outlet-${req.outlet._id}`).emit('queue-update', {
+                completedToken: order.tokenNumber
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Order verified and completed!',
+            data: {
+                tokenNumber: order.tokenNumber,
+                orderNumber: order.orderNumber
+            }
+        });
+
+    } catch (error) {
+        console.error('Verify order error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify order'
+        });
+    }
+});
+
+// @route   POST /api/admin/orders/:id/verify-by-pin
+// @desc    Verify order just by PIN (faster lookup)
+// @access  Private (Outlet Admin)
+router.post('/orders/verify-by-pin', verifyOutletAdmin, async (req, res) => {
+    try {
+        const { pin } = req.body;
+
+        if (!pin || pin.length !== 4) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid 4-digit PIN is required'
+            });
+        }
+
+        const order = await Order.findOne({
+            outlet: req.outlet._id,
+            status: 'ready',
+            pickupPIN: pin
+        }).populate('user', 'fullName');
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'No ready order found with this PIN'
+            });
+        }
+
+        // Complete the order
+        await order.complete();
+
+        // Update user's favorite items if not offline order
+        if (order.user) {
+            const user = await User.findById(order.user);
+            if (user) {
+                for (const item of order.items) {
+                    await user.updateFavorite(item.menuItem);
+                }
+            }
+        }
+
+        // Update outlet stats
+        await Outlet.findByIdAndUpdate(req.outlet._id, {
+            $inc: {
+                'stats.totalOrders': 1,
+                'stats.totalRevenue': order.totalAmount
+            }
+        });
+
+        // Emit socket event
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`order-${order._id}`).emit('order-completed', {
+                orderId: order._id,
+                status: 'completed'
+            });
+            io.to(`outlet-${req.outlet._id}`).emit('queue-update', {
+                completedToken: order.tokenNumber
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Order verified and completed!',
+            data: {
+                tokenNumber: order.tokenNumber,
+                orderNumber: order.orderNumber,
+                customerName: order.user?.fullName || order.offlineCustomer?.name || 'Walk-in'
+            }
+        });
+
+    } catch (error) {
+        console.error('Verify by PIN error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify order'
+        });
+    }
+});
+
+// @route   POST /api/admin/orders/offline
+// @desc    Create offline walk-in order
+// @access  Private (Outlet Admin)
+router.post('/orders/offline', verifyOutletAdmin, [
+    body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+    body('items.*.menuItemId').isMongoId().withMessage('Valid menu item is required'),
+    body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+    validate
+], async (req, res) => {
+    try {
+        const { items, customerName, customerPhone, specialInstructions } = req.body;
+
+        // Process order items
+        const orderItems = [];
+        let totalAmount = 0;
+        let maxPrepTime = 0;
+
+        for (const item of items) {
+            const menuItem = await MenuItem.findOne({
+                _id: item.menuItemId,
+                outlet: req.outlet._id
+            });
+
+            if (!menuItem) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Menu item not found: ${item.menuItemId}`
+                });
+            }
+
+            if (!menuItem.isAvailable) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Item not available: ${menuItem.name}`
+                });
+            }
+
+            const itemTotal = menuItem.price * item.quantity;
+            totalAmount += itemTotal;
+            maxPrepTime = Math.max(maxPrepTime, menuItem.prepTime);
+
+            orderItems.push({
+                menuItem: menuItem._id,
+                name: menuItem.name,
+                price: menuItem.price,
+                quantity: item.quantity,
+                prepTime: menuItem.prepTime
+            });
+        }
+
+        // Create offline order (no user, pre-paid)
+        const order = await Order.create({
+            outlet: req.outlet._id,
+            items: orderItems,
+            totalAmount,
+            totalPrepTime: maxPrepTime,
+            specialInstructions,
+            status: 'accepted', // Start as accepted since it's in-person
+            isOffline: true,
+            offlineCustomer: {
+                name: customerName || 'Walk-in',
+                phone: customerPhone
+            },
+            payment: {
+                status: 'paid',
+                method: 'cash',
+                paidAt: new Date()
+            }
+        });
+
+        // Start timer immediately
+        order.timerStartedAt = new Date();
+        order.estimatedReadyAt = new Date(Date.now() + maxPrepTime * 60 * 1000);
+        await order.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Offline order created',
+            data: {
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                tokenNumber: order.tokenNumber,
+                pickupPIN: order.pickupPIN,
+                totalAmount: order.totalAmount,
+                estimatedReadyAt: order.estimatedReadyAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Offline order error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create offline order'
+        });
+    }
+});
+
+// @route   POST /api/admin/upload/outlet-image
+// @desc    Upload outlet cover image
+// @access  Private (Outlet Admin)
+router.post('/upload/outlet-image', verifyOutletAdmin, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No image file provided'
+            });
+        }
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.path, 'campuscravings/outlets');
+
+        // Delete temp file
+        fs.unlinkSync(req.file.path);
+
+        // Update outlet
+        req.outlet.coverImage = result.url;
+        await req.outlet.save();
+
+        res.json({
+            success: true,
+            message: 'Outlet image uploaded successfully',
+            data: { imageUrl: result.url }
+        });
+
+    } catch (error) {
+        console.error('Outlet image upload error:', error);
+        // Clean up temp file if exists
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload image'
+        });
+    }
+});
+
+// @route   POST /api/admin/upload/menu-item/:id
+// @desc    Upload menu item image
+// @access  Private (Outlet Admin)
+router.post('/upload/menu-item/:id', verifyOutletAdmin, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No image file provided'
+            });
+        }
+
+        // Find menu item
+        const item = await MenuItem.findOne({
+            _id: req.params.id,
+            outlet: req.outlet._id
+        });
+
+        if (!item) {
+            fs.unlinkSync(req.file.path);
+            return res.status(404).json({
+                success: false,
+                message: 'Menu item not found'
+            });
+        }
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.path, 'campuscravings/menu-items');
+
+        // Delete temp file
+        fs.unlinkSync(req.file.path);
+
+        // Update menu item
+        item.image = result.url;
+        await item.save();
+
+        res.json({
+            success: true,
+            message: 'Menu item image uploaded successfully',
+            data: { imageUrl: result.url, item }
+        });
+
+    } catch (error) {
+        console.error('Menu item image upload error:', error);
+        // Clean up temp file if exists
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload image'
+        });
+    }
+});
+
+// @route   DELETE /api/admin/upload/menu-item/:id/image
+// @desc    Remove menu item image
+// @access  Private (Outlet Admin)
+router.delete('/upload/menu-item/:id/image', verifyOutletAdmin, async (req, res) => {
+    try {
+        const item = await MenuItem.findOne({
+            _id: req.params.id,
+            outlet: req.outlet._id
+        });
+
+        if (!item) {
+            return res.status(404).json({
+                success: false,
+                message: 'Menu item not found'
+            });
+        }
+
+        item.image = null;
+        await item.save();
+
+        res.json({
+            success: true,
+            message: 'Menu item image removed',
+            data: { item }
+        });
+
+    } catch (error) {
+        console.error('Remove menu image error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to remove image'
+        });
+    }
+});
+
 module.exports = router;
+
+

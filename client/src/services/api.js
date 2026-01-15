@@ -134,3 +134,13 @@ export const analyzeAPI = {
     batchNutrition: (items) =>
         api.post('/analyze/nutrition/batch', { items })
 };
+
+export const queueAPI = {
+    getStatus: (outletId) => api.get(`/queue/${outletId}`)
+};
+
+export const adminAPI = {
+    getQueueStatus: () => api.get('/admin/queue'),
+    verifyByPin: (pin) => api.post('/admin/orders/verify-by-pin', { pin }),
+    createOfflineOrder: (data) => api.post('/admin/orders/offline', data)
+};

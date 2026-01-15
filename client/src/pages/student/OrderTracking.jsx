@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, CheckCircle } from 'lucide-react';
-import { ordersAPI } from '../../services/api';
+import { ArrowLeft, MapPin, Phone, CheckCircle, Copy, Check } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { ordersAPI, queueAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,8 @@ const OrderTracking = () => {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
+    const [copiedPIN, setCopiedPIN] = useState(false);
+    const [queueStatus, setQueueStatus] = useState(null);
 
     // Fetch order details
     useEffect(() => {
@@ -34,6 +37,24 @@ const OrderTracking = () => {
 
         fetchOrder();
     }, [id, navigate]);
+
+    // Fetch queue status
+    useEffect(() => {
+        if (order?.outlet?._id) {
+            const fetchQueue = async () => {
+                try {
+                    const response = await queueAPI.getStatus(order.outlet._id);
+                    setQueueStatus(response.data.data);
+                } catch (error) {
+                    console.log('Queue status unavailable');
+                }
+            };
+            fetchQueue();
+            // Refresh every 30 seconds
+            const interval = setInterval(fetchQueue, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [order?.outlet?._id]);
 
     // Socket connection for real-time updates
     useEffect(() => {
@@ -311,6 +332,131 @@ const OrderTracking = () => {
                         <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
                             Please come to collect it at the outlet counter.
                         </p>
+                    </div>
+                )}
+
+                {/* Pickup Credentials - Show when order is paid */}
+                {order.payment?.status === 'paid' && order.status !== 'completed' && order.status !== 'cancelled' && (
+                    <div style={{
+                        marginTop: 'var(--space-xl)',
+                        padding: 'var(--space-lg)',
+                        background: 'var(--bg-card)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--border-subtle)',
+                        textAlign: 'center'
+                    }}>
+                        <h3 style={{
+                            fontSize: 'var(--font-size-base)',
+                            fontWeight: 600,
+                            marginBottom: 'var(--space-md)',
+                            color: 'var(--text-primary)'
+                        }}>
+                            🎫 Pickup Credentials
+                        </h3>
+
+                        {/* Token Number */}
+                        {order.tokenNumber && (
+                            <div style={{
+                                marginBottom: 'var(--space-md)',
+                                padding: 'var(--space-md)',
+                                background: 'linear-gradient(135deg, var(--primary-500), var(--secondary-500))',
+                                borderRadius: 'var(--radius-md)',
+                                color: 'white'
+                            }}>
+                                <p style={{ fontSize: 'var(--font-size-xs)', opacity: 0.9, marginBottom: 4 }}>Your Token</p>
+                                <p style={{ fontSize: 'var(--font-size-4xl)', fontWeight: 800, letterSpacing: 2 }}>
+                                    #{order.tokenNumber}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Queue Position */}
+                        {queueStatus && order.tokenNumber && (
+                            <div style={{
+                                marginBottom: 'var(--space-md)',
+                                padding: 'var(--space-sm)',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--text-secondary)'
+                            }}>
+                                {queueStatus.readyTokens?.length > 0 ? (
+                                    <p>🔔 Now Serving: <strong style={{ color: 'var(--success)' }}>#{queueStatus.readyTokens.join(', #')}</strong></p>
+                                ) : queueStatus.preparingTokens?.length > 0 ? (
+                                    <p>👨‍🍳 Preparing: #{queueStatus.preparingTokens.slice(0, 3).join(', #')}{queueStatus.preparingTokens.length > 3 ? '...' : ''}</p>
+                                ) : (
+                                    <p>📋 {queueStatus.completedCount || 0} orders served today</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* PIN Display */}
+                        {order.pickupPIN && (
+                            <div style={{ marginBottom: 'var(--space-md)' }}>
+                                <p style={{
+                                    fontSize: 'var(--font-size-xs)',
+                                    color: 'var(--text-muted)',
+                                    marginBottom: 'var(--space-xs)'
+                                }}>Show this PIN at counter</p>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 'var(--space-sm)'
+                                }}>
+                                    <span style={{
+                                        fontSize: 'var(--font-size-3xl)',
+                                        fontWeight: 700,
+                                        fontFamily: 'monospace',
+                                        letterSpacing: 8,
+                                        color: 'var(--text-primary)',
+                                        background: 'var(--bg-elevated)',
+                                        padding: '8px 16px',
+                                        borderRadius: 'var(--radius-md)'
+                                    }}>
+                                        {order.pickupPIN}
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(order.pickupPIN);
+                                            setCopiedPIN(true);
+                                            setTimeout(() => setCopiedPIN(false), 2000);
+                                            toast.success('PIN copied!');
+                                        }}
+                                        className="btn btn-ghost btn-icon"
+                                        style={{ padding: 8 }}
+                                    >
+                                        {copiedPIN ? <Check size={18} style={{ color: 'var(--success)' }} /> : <Copy size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* QR Code */}
+                        {order.pickupToken && (
+                            <div style={{
+                                padding: 'var(--space-md)',
+                                background: 'white',
+                                borderRadius: 'var(--radius-md)',
+                                display: 'inline-block'
+                            }}>
+                                <QRCodeSVG
+                                    value={JSON.stringify({
+                                        orderId: order._id,
+                                        token: order.pickupToken,
+                                        outlet: order.outlet?._id
+                                    })}
+                                    size={160}
+                                    level="M"
+                                    includeMargin={false}
+                                />
+                                <p style={{
+                                    fontSize: 'var(--font-size-xs)',
+                                    color: 'var(--text-muted)',
+                                    marginTop: 'var(--space-sm)'
+                                }}>Or scan QR code</p>
+                            </div>
+                        )}
                     </div>
                 )}
 

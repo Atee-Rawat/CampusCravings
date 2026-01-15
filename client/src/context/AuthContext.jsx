@@ -77,9 +77,25 @@ export const AuthProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    // Register new user
+    // Register new user (now returns token)
     const register = async (userData) => {
         const response = await api.post('/auth/register', userData);
+        if (response.data.success && response.data.data.token) {
+            localStorage.setItem('token', response.data.data.token);
+            setToken(response.data.data.token);
+            setUser(response.data.data.user);
+        }
+        return response.data;
+    };
+
+    // Login with password
+    const login = async (identifier, password, rememberMe = false) => {
+        const response = await api.post('/auth/login', { identifier, password, rememberMe });
+        if (response.data.success && response.data.data.token) {
+            localStorage.setItem('token', response.data.data.token);
+            setToken(response.data.data.token);
+            setUser(response.data.data.user);
+        }
         return response.data;
     };
 
@@ -178,6 +194,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: !!user,
         register,
+        login,
         checkUser,
         sendOTP,
         verifyOTP,

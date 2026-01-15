@@ -41,7 +41,7 @@ const Home = () => {
     const firstName = user?.fullName?.split(' ')[0] || 'there';
 
     return (
-        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 100 }}>
+        <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 120 }}>
             {/* Hero Section */}
             <div className="home-hero animate-fade-in">
                 <p className="text-secondary">
@@ -153,3 +153,5 @@ const Home = () => {
 };
 
 export default Home;
+
+

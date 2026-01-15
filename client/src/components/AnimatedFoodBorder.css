@@ -1,0 +1,146 @@
+/* Animated Food Border Container */
+.animated-food-border {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: visible;
+}
+
+/* Orbit container for food items */
+.food-orbit {
+    position: absolute;
+    inset: -12px;
+    pointer-events: none;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.food-orbit.fading {
+    opacity: 0;
+}
+
+/* Individual food item */
+.food-item {
+    position: absolute;
+    font-size: 1.2rem;
+    animation: orbit 12s linear infinite;
+    animation-delay: calc(var(--index) * -12s / var(--total));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    z-index: 11;
+}
+
+/* Content inside the border */
+.food-border-content {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* Orbit animation - moves items around the rectangle border */
+@keyframes orbit {
+    0% {
+        /* Start at top-left */
+        top: 0;
+        left: 0;
+        offset-path: path('M 0,0 L 100%,0 L 100%,100% L 0,100% Z');
+        offset-distance: 0%;
+    }
+
+    100% {
+        offset-distance: 100%;
+    }
+}
+
+/* More compatible orbit animation using transform */
+@keyframes orbit {
+    0% {
+        left: 0%;
+        top: -12px;
+        transform: translateX(0);
+    }
+
+    12.5% {
+        left: 50%;
+        top: -12px;
+        transform: translateX(-50%);
+    }
+
+    25% {
+        left: calc(100% - 12px);
+        top: -12px;
+        transform: translateX(0);
+    }
+
+    37.5% {
+        left: calc(100% + 4px);
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    50% {
+        left: calc(100% - 12px);
+        top: calc(100% - 4px);
+        transform: translateX(0);
+    }
+
+    62.5% {
+        left: 50%;
+        top: calc(100% + 4px);
+        transform: translateX(-50%);
+    }
+
+    75% {
+        left: -12px;
+        top: calc(100% - 4px);
+        transform: translateX(0);
+    }
+
+    87.5% {
+        left: -16px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    100% {
+        left: 0%;
+        top: -12px;
+        transform: translateX(0);
+    }
+}
+
+/* Glow effect behind moving items */
+.food-item::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 1;
+    }
+}
+
+/* Responsive font size */
+@media (max-width: 480px) {
+    .food-item {
+        font-size: 1rem;
+    }
+
+    .food-orbit {
+        inset: -10px;
+    }
+}

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Clock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, Trash2, X, Clock, Upload, Image as ImageIcon } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ const MenuManager = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [uploading, setUploading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -17,6 +18,7 @@ const MenuManager = () => {
         isVeg: true,
         isAvailable: true
     });
+    const fileInputRef = useRef(null);
 
     const token = localStorage.getItem('adminToken');
     const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -136,6 +138,52 @@ const MenuManager = () => {
         }
     };
 
+    // Upload image for menu item
+    const uploadImage = async (itemId, file) => {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await api.post(`/admin/upload/menu-item/${itemId}`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            setItems(prev => prev.map(i => i._id === itemId ? response.data.data.item : i));
+            toast.success('Image uploaded!');
+        } catch (error) {
+            toast.error('Failed to upload image');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // Remove image from menu item
+    const removeImage = async (itemId) => {
+        try {
+            const response = await api.delete(`/admin/upload/menu-item/${itemId}/image`, config);
+            setItems(prev => prev.map(i => i._id === itemId ? response.data.data.item : i));
+            toast.success('Image removed');
+        } catch (error) {
+            toast.error('Failed to remove image');
+        }
+    };
+
+    // Handle file change
+    const handleFileChange = (e, itemId) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image must be less than 5MB');
+                return;
+            }
+            uploadImage(itemId, file);
+        }
+    };
+
     if (loading) {
         return (
             <div className="loading-screen">
@@ -207,6 +255,64 @@ const MenuManager = () => {
                                         opacity: item.isAvailable ? 1 : 0.6
                                     }}
                                 >
+                                    {/* Item Image */}
+                                    <div style={{
+                                        width: '100%',
+                                        height: 120,
+                                        borderRadius: 'var(--radius-sm)',
+                                        marginBottom: 'var(--space-sm)',
+                                        background: item.image ? `url(${item.image}) center/cover` : 'var(--bg-elevated)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {!item.image && (
+                                            <ImageIcon size={32} style={{ color: 'var(--text-muted)' }} />
+                                        )}
+
+                                        {/* Image upload overlay */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: 'rgba(0,0,0,0.5)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: 'var(--space-sm)',
+                                            opacity: 0,
+                                            transition: 'opacity 0.2s',
+                                            cursor: 'pointer'
+                                        }}
+                                            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                                            onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                                        >
+                                            <label style={{ cursor: 'pointer' }}>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={(e) => handleFileChange(e, item._id)}
+                                                    disabled={uploading}
+                                                />
+                                                <div className="btn btn-sm btn-primary">
+                                                    <Upload size={14} />
+                                                    {item.image ? 'Change' : 'Upload'}
+                                                </div>
+                                            </label>
+                                            {item.image && (
+                                                <button
+                                                    className="btn btn-sm btn-ghost"
+                                                    style={{ background: 'rgba(255,255,255,0.2)' }}
+                                                    onClick={() => removeImage(item._id)}
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -415,6 +521,10 @@ const MenuManager = () => {
                                     Available
                                 </label>
                             </div>
+
+                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }}>
+                                💡 Tip: You can upload an image after saving the item
+                            </p>
 
                             <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
                                 <button

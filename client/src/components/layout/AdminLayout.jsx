@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const AdminLayout = () => {
@@ -120,6 +120,11 @@ const AdminLayout = () => {
                     <NavLink to="/admin/coupons" style={navLinkStyle} onClick={closeSidebar}>
                         <Tag size={20} />
                         <span>Coupons</span>
+                    </NavLink>
+
+                    <NavLink to="/admin/settings" style={navLinkStyle} onClick={closeSidebar}>
+                        <Settings size={20} />
+                        <span>Settings</span>
                     </NavLink>
                 </nav>
 

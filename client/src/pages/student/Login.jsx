@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Phone, Mail, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Login = () => {
     const [identifier, setIdentifier] = useState('');
+    const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { checkUser, devLogin } = useAuth();
+    const { login, devLogin } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -18,22 +21,24 @@ const Login = () => {
             return;
         }
 
+        if (!password.trim()) {
+            toast.error('Please enter your password');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const result = await checkUser(identifier);
+            const result = await login(identifier, password, rememberMe);
 
             if (result.success) {
-                // For dev: login as this specific user (skip OTP)
-                await devLogin(identifier);
-                toast.success(`Welcome back!`);
+                toast.success('Welcome back!');
                 navigate('/');
             }
         } catch (error) {
-            if (error.status === 404) {
-                toast.error('No account found. Please register first.');
-            } else if (error.status === 403) {
-                toast.error('Account not verified. Please verify your account.');
+            if (error.needsPassword) {
+                toast.error('Please set a password first');
+                navigate('/forgot-password');
             } else {
                 toast.error(error.message || 'Login failed');
             }
@@ -76,7 +81,7 @@ const Login = () => {
                                 onChange={(e) => setIdentifier(e.target.value)}
                                 style={{ paddingLeft: 48 }}
                             />
-                            <Phone
+                            <Mail
                                 size={20}
                                 style={{
                                     position: 'absolute',
@@ -89,6 +94,86 @@ const Login = () => {
                         </div>
                     </div>
 
+                    <div className="input-group">
+                        <label className="input-label">Password</label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                className="input"
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                style={{ paddingLeft: 48, paddingRight: 48 }}
+                            />
+                            <Lock
+                                size={20}
+                                style={{
+                                    position: 'absolute',
+                                    left: 16,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    color: 'var(--text-muted)'
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: 12,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-muted)',
+                                    padding: 4
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 'var(--space-md)'
+                    }}>
+                        <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-xs)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--font-size-sm)',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                style={{
+                                    width: 18,
+                                    height: 18,
+                                    accentColor: 'var(--primary-500)'
+                                }}
+                            />
+                            Remember me
+                        </label>
+
+                        <Link
+                            to="/forgot-password"
+                            style={{
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--primary-500)',
+                                fontWeight: 500
+                            }}
+                        >
+                            Forgot Password?
+                        </Link>
+                    </div>
+
                     <button
                         type="submit"
                         className="btn btn-primary btn-block"
@@ -98,7 +183,7 @@ const Login = () => {
                             <span className="spinner" style={{ width: 20, height: 20 }}></span>
                         ) : (
                             <>
-                                Continue
+                                Login
                                 <ArrowRight size={20} />
                             </>
                         )}

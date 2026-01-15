@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
     fullName: {
@@ -21,6 +22,10 @@ const userSchema = new mongoose.Schema({
         unique: true,
         trim: true,
         match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian phone number']
+    },
+    password: {
+        type: String,
+        minlength: [6, 'Password must be at least 6 characters']
     },
     firebaseUid: {
         type: String,
@@ -54,10 +59,26 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['student', 'admin'],
         default: 'student'
-    }
+    },
+    // Password reset fields
+    passwordResetToken: String,
+    passwordResetExpires: Date
 }, {
     timestamps: true
 });
+
+// Hash password before saving
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password') || !this.password) return next();
+    this.password = await bcrypt.hash(this.password, 12);
+    next();
+});
+
+// Compare password method
+userSchema.methods.comparePassword = async function (candidatePassword) {
+    if (!this.password) return false;
+    return await bcrypt.compare(candidatePassword, this.password);
+};
 
 // Indexes for efficient queries (email, phone, firebaseUid already indexed via unique: true)
 userSchema.index({ university: 1 });

@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Store } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, ArrowRight, Store, Eye, EyeOff } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const AdminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -111,12 +113,12 @@ const AdminLogin = () => {
                         <label className="input-label">Password</label>
                         <div style={{ position: 'relative' }}>
                             <input
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 className="input"
                                 placeholder="Enter password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                style={{ paddingLeft: 48 }}
+                                style={{ paddingLeft: 48, paddingRight: 48 }}
                             />
                             <Lock
                                 size={20}
@@ -128,7 +130,63 @@ const AdminLogin = () => {
                                     color: 'var(--text-muted)'
                                 }}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: 12,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-muted)',
+                                    padding: 4
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 'var(--space-md)'
+                    }}>
+                        <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-xs)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--font-size-sm)',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                style={{
+                                    width: 18,
+                                    height: 18,
+                                    accentColor: 'var(--primary-500)'
+                                }}
+                            />
+                            Remember me
+                        </label>
+
+                        <Link
+                            to="/admin/forgot-password"
+                            style={{
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--primary-500)',
+                                fontWeight: 500
+                            }}
+                        >
+                            Forgot Password?
+                        </Link>
                     </div>
 
                     <button
@@ -162,3 +220,4 @@ const AdminLogin = () => {
 };
 
 export default AdminLogin;
+

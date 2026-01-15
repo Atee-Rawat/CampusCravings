@@ -8,6 +8,7 @@ import AdminLayout from './components/layout/AdminLayout';
 // Auth Pages
 import Login from './pages/student/Login';
 import Register from './pages/student/Register';
+import ForgotPassword from './pages/student/ForgotPassword';
 
 // Student Pages
 import Home from './pages/student/Home';
@@ -24,6 +25,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import MenuManager from './pages/admin/MenuManager';
 import Analytics from './pages/admin/Analytics';
 import Coupons from './pages/admin/Coupons';
+import AdminSettings from './pages/admin/Settings';
 
 // Loading component
 const LoadingScreen = () => (
@@ -77,15 +79,22 @@ function App() {
                     <Register />
                 </PublicRoute>
             } />
+            <Route path="/forgot-password" element={
+                <PublicRoute>
+                    <ForgotPassword />
+                </PublicRoute>
+            } />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/forgot-password" element={<ForgotPassword />} />
             <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="menu" element={<MenuManager />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="coupons" element={<Coupons />} />
+                <Route path="settings" element={<AdminSettings />} />
             </Route>
 
             {/* Protected Student Routes */}
