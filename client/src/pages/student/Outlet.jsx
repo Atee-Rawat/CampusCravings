@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf, Tag } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf, Tag, Star, X } from 'lucide-react';
 import { outletsAPI, menuAPI, analyzeAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import ReviewsList from '../../components/ReviewsList';
+import StarRating from '../../components/StarRating';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -56,6 +59,7 @@ const estimateFallbackNutrition = (item) => {
 const Outlet = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { addItem, getItemQuantity, incrementQuantity, decrementQuantity, itemCount, outlet: cartOutlet } = useCart();
 
     const [outlet, setOutlet] = useState(null);
@@ -67,6 +71,7 @@ const Outlet = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [healthyOnly, setHealthyOnly] = useState(false);
     const [coupons, setCoupons] = useState([]);
+    const [reviewsModalItem, setReviewsModalItem] = useState(null);
 
     useEffect(() => {
         const fetchOutletAndMenu = async () => {
@@ -390,6 +395,53 @@ const Outlet = () => {
                                             )}
                                         </div>
 
+                                        {/* Rating and Reviews */}
+                                        {item.averageRating > 0 && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 'var(--space-xs)',
+                                                marginTop: 'var(--space-xs)'
+                                            }}>
+                                                <StarRating rating={item.averageRating} size={14} />
+                                                <button
+                                                    onClick={() => setReviewsModalItem(item)}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'var(--primary-500)',
+                                                        cursor: 'pointer',
+                                                        fontSize: 'var(--font-size-xs)',
+                                                        textDecoration: 'underline',
+                                                        padding: 0
+                                                    }}
+                                                >
+                                                    ({item.reviewCount} {item.reviewCount === 1 ? 'review' : 'reviews'})
+                                                </button>
+                                            </div>
+                                        )}
+                                        {item.averageRating === 0 && user && (
+                                            <button
+                                                onClick={() => setReviewsModalItem(item)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: 'var(--text-muted)',
+                                                    cursor: 'pointer',
+                                                    fontSize: 'var(--font-size-xs)',
+                                                    textDecoration: 'underline',
+                                                    padding: 0,
+                                                    marginTop: 'var(--space-xs)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
+                                                }}
+                                            >
+                                                <Star size={12} />
+                                                Be the first to review
+                                            </button>
+                                        )}
+
                                         {/* Nutrition Info */}
                                         {item.nutrition && (
                                             <div style={{
@@ -468,6 +520,71 @@ const Outlet = () => {
                         </span>
                         <span>View Cart →</span>
                     </button>
+                </div>
+            )}
+
+            {/* Reviews Modal */}
+            {reviewsModalItem && user && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        padding: 'var(--space-md)'
+                    }}
+                    onClick={() => setReviewsModalItem(null)}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            background: 'var(--bg-primary)',
+                            borderRadius: 'var(--radius-lg)',
+                            maxWidth: '800px',
+                            width: '100%',
+                            maxHeight: '90vh',
+                            overflow: 'auto',
+                            position: 'relative'
+                        }}
+                    >
+                        {/* Modal Header */}
+                        <div style={{
+                            position: 'sticky',
+                            top: 0,
+                            background: 'var(--bg-primary)',
+                            padding: 'var(--space-lg)',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            zIndex: 10
+                        }}>
+                            <h2 style={{ fontSize: 'var(--font-size-xl)', margin: 0 }}>
+                                {reviewsModalItem.name}
+                            </h2>
+                            <button
+                                onClick={() => setReviewsModalItem(null)}
+                                className="btn btn-ghost btn-icon"
+                                style={{ width: 40, height: 40 }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div style={{ padding: 'var(--space-lg)' }}>
+                            <ReviewsList
+                                menuItemId={reviewsModalItem._id}
+                                currentUserId={user._id}
+                            />
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
