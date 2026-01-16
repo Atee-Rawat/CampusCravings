@@ -522,45 +522,68 @@ router.get('/menu', verifyOutletAdmin, async (req, res) => {
 // @access  Private (Outlet Admin)
 router.get('/analytics', verifyOutletAdmin, async (req, res) => {
     try {
-        const { period = 'week' } = req.query;
+        const { period, month, year } = req.query;
 
         const now = new Date();
-        let startDate, previousStartDate, previousEndDate;
+        let startDate, endDate, previousStartDate, previousEndDate;
 
-        // Calculate date ranges based on period
-        switch (period) {
-            case 'week':
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - 7);
-                previousStartDate = new Date(startDate);
-                previousStartDate.setDate(startDate.getDate() - 7);
-                previousEndDate = new Date(startDate);
-                break;
-            case 'month':
-                startDate = new Date(now);
-                startDate.setMonth(now.getMonth() - 1);
-                previousStartDate = new Date(startDate);
-                previousStartDate.setMonth(startDate.getMonth() - 1);
-                previousEndDate = new Date(startDate);
-                break;
-            case 'year':
-                startDate = new Date(now);
-                startDate.setFullYear(now.getFullYear() - 1);
-                previousStartDate = new Date(startDate);
-                previousStartDate.setFullYear(startDate.getFullYear() - 1);
-                previousEndDate = new Date(startDate);
-                break;
-            default:
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - 7);
+        // If month and year are provided, use those
+        if (month && year) {
+            const selectedMonth = parseInt(month) - 1; // JS months are 0-indexed
+            const selectedYear = parseInt(year);
+
+            // Start of selected month
+            startDate = new Date(selectedYear, selectedMonth, 1);
+            startDate.setHours(0, 0, 0, 0);
+
+            // End of selected month (first day of next month)
+            endDate = new Date(selectedYear, selectedMonth + 1, 1);
+            endDate.setHours(0, 0, 0, 0);
+
+            // Previous month for comparison
+            previousStartDate = new Date(selectedYear, selectedMonth - 1, 1);
+            previousStartDate.setHours(0, 0, 0, 0);
+            previousEndDate = new Date(selectedYear, selectedMonth, 1);
+            previousEndDate.setHours(0, 0, 0, 0);
+        } else {
+            // Fallback to period-based logic for backward compatibility
+            switch (period) {
+                case 'week':
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 7);
+                    previousStartDate = new Date(startDate);
+                    previousStartDate.setDate(startDate.getDate() - 7);
+                    previousEndDate = new Date(startDate);
+                    endDate = new Date(now);
+                    break;
+                case 'month':
+                    startDate = new Date(now);
+                    startDate.setMonth(now.getMonth() - 1);
+                    previousStartDate = new Date(startDate);
+                    previousStartDate.setMonth(startDate.getMonth() - 1);
+                    previousEndDate = new Date(startDate);
+                    endDate = new Date(now);
+                    break;
+                case 'year':
+                    startDate = new Date(now);
+                    startDate.setFullYear(now.getFullYear() - 1);
+                    previousStartDate = new Date(startDate);
+                    previousStartDate.setFullYear(startDate.getFullYear() - 1);
+                    previousEndDate = new Date(startDate);
+                    endDate = new Date(now);
+                    break;
+                default:
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 7);
+                    endDate = new Date(now);
+            }
+            startDate.setHours(0, 0, 0, 0);
         }
-
-        startDate.setHours(0, 0, 0, 0);
 
         // Current period orders
         const orders = await Order.find({
             outlet: req.outlet._id,
-            createdAt: { $gte: startDate },
+            createdAt: { $gte: startDate, $lt: endDate || now },
             'payment.status': 'paid',
             status: { $ne: 'cancelled' }
         });
@@ -589,6 +612,22 @@ router.get('/analytics', verifyOutletAdmin, async (req, res) => {
 
         // Daily breakdown for chart
         const dailyData = {};
+
+        // If month/year specified, create entries for ALL days in the month
+        if (month && year) {
+            const selectedMonth = parseInt(month) - 1;
+            const selectedYear = parseInt(year);
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+
+            // Initialize all dates with zero values
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(selectedYear, selectedMonth, day);
+                const dateKey = date.toISOString().split('T')[0];
+                dailyData[dateKey] = { revenue: 0, orders: 0 };
+            }
+        }
+
+        // Fill in actual order data
         orders.forEach(order => {
             const dateKey = order.createdAt.toISOString().split('T')[0];
             if (!dailyData[dateKey]) {
@@ -623,7 +662,7 @@ router.get('/analytics', verifyOutletAdmin, async (req, res) => {
         res.json({
             success: true,
             data: {
-                period,
+                period: period || 'custom',
                 summary: {
                     totalRevenue,
                     previousRevenue,

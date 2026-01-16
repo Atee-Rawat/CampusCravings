@@ -221,30 +221,38 @@ const Dashboard = () => {
                 gap: 'var(--space-md)',
                 marginBottom: 'var(--space-xl)'
             }}>
-                <StatCard
-                    icon={<ShoppingBag size={24} />}
-                    label="Today's Orders"
-                    value={stats?.todayOrders || 0}
-                    color="var(--primary-500)"
-                />
-                <StatCard
-                    icon={<DollarSign size={24} />}
-                    label="Today's Revenue"
-                    value={`₹${((stats?.todayRevenue || 0) / 100).toFixed(0)}`}
-                    color="var(--success)"
-                />
-                <StatCard
-                    icon={<Clock size={24} />}
-                    label="Pending"
-                    value={stats?.pendingOrders || 0}
-                    color="var(--warning)"
-                />
-                <StatCard
-                    icon={<CheckCircle size={24} />}
-                    label="Completed"
-                    value={stats?.completedOrders || 0}
-                    color="var(--secondary-500)"
-                />
+                <div className="admin-card-stagger">
+                    <StatCard
+                        icon={<ShoppingBag size={24} />}
+                        label="Today's Orders"
+                        value={stats?.todayOrders || 0}
+                        color="var(--primary-500)"
+                    />
+                </div>
+                <div className="admin-card-stagger">
+                    <StatCard
+                        icon={<DollarSign size={24} />}
+                        label="Today's Revenue"
+                        value={`₹${((stats?.todayRevenue || 0) / 100).toFixed(0)}`}
+                        color="var(--success)"
+                    />
+                </div>
+                <div className="admin-card-stagger">
+                    <StatCard
+                        icon={<Clock size={24} />}
+                        label="Pending"
+                        value={stats?.pendingOrders || 0}
+                        color="var(--warning)"
+                    />
+                </div>
+                <div className="admin-card-stagger">
+                    <StatCard
+                        icon={<CheckCircle size={24} />}
+                        label="Completed"
+                        value={stats?.completedOrders || 0}
+                        color="var(--secondary-500)"
+                    />
+                </div>
             </div>
 
             {/* Queue Display & Quick Actions */}
@@ -478,7 +486,7 @@ const Dashboard = () => {
 
 // Stat Card Component
 const StatCard = ({ icon, label, value, color }) => (
-    <div style={{
+    <div className="hover-lift" style={{
         padding: 'var(--space-lg)',
         background: 'var(--bg-card)',
         borderRadius: 'var(--radius-lg)',

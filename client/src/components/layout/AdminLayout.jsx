@@ -1,9 +1,12 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X, Settings } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X, Settings, Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import '../../styles/AdminAnimations.css';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
+    const { theme, toggleTheme, isDark } = useTheme();
     const [outlet, setOutlet] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -61,20 +64,38 @@ const AdminLayout = () => {
             {/* Sidebar */}
             <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
                 <div style={{ marginBottom: 'var(--space-xl)' }}>
-                    <h2 style={{
-                        fontSize: 'var(--font-size-lg)',
-                        fontWeight: 700,
-                        color: 'var(--primary-500)'
-                    }}>
-                        CampusCravings
-                    </h2>
-                    <p style={{
-                        fontSize: 'var(--font-size-sm)',
-                        color: 'var(--text-secondary)',
-                        marginTop: 'var(--space-xs)'
-                    }}>
-                        Admin Portal
-                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-sm)' }}>
+                        <div>
+                            <h2 style={{
+                                fontSize: 'var(--font-size-lg)',
+                                fontWeight: 700,
+                                color: 'var(--primary-500)'
+                            }}>
+                                CampusCravings
+                            </h2>
+                            <p style={{
+                                fontSize: 'var(--font-size-sm)',
+                                color: 'var(--text-secondary)',
+                                marginTop: 'var(--space-xs)'
+                            }}>
+                                Admin Portal
+                            </p>
+                        </div>
+                        <button
+                            onClick={toggleTheme}
+                            className="btn btn-ghost btn-icon"
+                            style={{
+                                width: 40,
+                                height: 40,
+                                minHeight: 'auto',
+                                padding: 0,
+                                transition: 'all var(--transition-normal)'
+                            }}
+                            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                        </button>
+                    </div>
                 </div>
 
                 {outlet && (
@@ -145,7 +166,7 @@ const AdminLayout = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="admin-main">
+            <main className="admin-main admin-page-enter">
                 <Outlet />
             </main>
         </div>
