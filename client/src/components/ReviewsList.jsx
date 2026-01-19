@@ -196,6 +196,7 @@ const ReviewsList = ({ menuItemId, currentUserId }) => {
             {showReviewForm && (
                 <div style={{ marginBottom: 'var(--space-lg)' }}>
                     <ReviewForm
+                        key={`${menuItemId}-${editingReview?._id || 'new'}`}
                         menuItemId={menuItemId}
                         existingReview={editingReview || userReview}
                         onSuccess={handleReviewSuccess}

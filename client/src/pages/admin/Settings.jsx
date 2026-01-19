@@ -177,53 +177,72 @@ const Settings = () => {
                         This image will be displayed on your outlet card in the student app.
                     </p>
 
-                    <div style={{
-                        width: '100%',
-                        maxWidth: 400,
-                        height: 200,
-                        borderRadius: 'var(--radius-md)',
-                        background: outlet?.coverImage ? `url(${outlet.coverImage}) center/cover` : 'var(--bg-elevated)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        border: '2px dashed var(--border-light)'
-                    }}>
-                        {!outlet?.coverImage && (
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                <ImageIcon size={48} style={{ marginBottom: 'var(--space-sm)' }} />
-                                <p>No cover image</p>
-                            </div>
-                        )}
-
-                        {/* Upload overlay */}
+                    <div style={{ display: 'flex', gap: 'var(--space-lg)', alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                        {/* Cover Image */}
                         <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: outlet?.coverImage ? 'rgba(0,0,0,0.5)' : 'transparent',
+                            width: '100%',
+                            maxWidth: 400,
+                            height: 200,
+                            borderRadius: 'var(--radius-md)',
+                            background: outlet?.coverImage ? `url(${outlet.coverImage}) center/cover` : 'var(--bg-elevated)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            borderRadius: 'var(--radius-md)',
-                            opacity: outlet?.coverImage ? 0 : 1,
-                            transition: 'opacity 0.2s'
-                        }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = outlet?.coverImage ? 0 : 1}
-                        >
-                            <label style={{ cursor: uploading ? 'wait' : 'pointer' }}>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={handleFileChange}
-                                    disabled={uploading}
-                                />
-                                <div className="btn btn-primary" style={{ pointerEvents: 'none' }}>
-                                    <Upload size={18} />
-                                    {uploading ? 'Uploading...' : outlet?.coverImage ? 'Change Image' : 'Upload Image'}
+                            position: 'relative',
+                            border: '2px dashed var(--border-light)'
+                        }}>
+                            {!outlet?.coverImage && (
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <ImageIcon size={48} style={{ marginBottom: 'var(--space-sm)' }} />
+                                    <p>No cover image</p>
                                 </div>
-                            </label>
+                            )}
+
+                            {/* Upload overlay */}
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: outlet?.coverImage ? 'rgba(0,0,0,0.5)' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 'var(--radius-md)',
+                                opacity: outlet?.coverImage ? 0 : 1,
+                                transition: 'opacity 0.2s'
+                            }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = outlet?.coverImage ? 0 : 1}
+                            >
+                                <label style={{ cursor: uploading ? 'wait' : 'pointer' }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={handleFileChange}
+                                        disabled={uploading}
+                                    />
+                                    <div className="btn btn-primary" style={{ pointerEvents: 'none' }}>
+                                        <Upload size={18} />
+                                        {uploading ? 'Uploading...' : outlet?.coverImage ? 'Change Image' : 'Upload Image'}
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Company Logo */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            <img
+                                src="/CC_logo.png"
+                                alt="CampusCravings Logo"
+                                style={{
+                                    height: '250px',
+                                    width: 'auto',
+                                    objectFit: 'contain'
+                                }}
+                            />
                         </div>
                     </div>
 
@@ -231,198 +250,198 @@ const Settings = () => {
                         Recommended: 800x600 pixels, max 5MB (JPEG, PNG, WebP)
                     </p>
                 </div>
-            </div>
 
-            {/* Outlet Information */}
-            <div style={{
-                background: 'var(--bg-card)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-xl)'
-            }}>
-                <h3 style={{ fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-lg)' }}>
-                    Outlet Information
-                </h3>
+                {/* Outlet Information */}
+                <div style={{
+                    background: 'var(--bg-card)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: 'var(--space-xl)'
+                }}>
+                    <h3 style={{ fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-lg)' }}>
+                        Outlet Information
+                    </h3>
 
-                {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-                        {/* Name */}
-                        <div className="input-group">
-                            <label className="input-label">Outlet Name *</label>
-                            <input
-                                type="text"
-                                className="input"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Description */}
-                        <div className="input-group">
-                            <label className="input-label">Description</label>
-                            <textarea
-                                className="input"
-                                rows={3}
-                                placeholder="Tell customers about your outlet..."
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                maxLength={500}
-                            />
-                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
-                                {formData.description.length}/500 characters
-                            </span>
-                        </div>
-
-                        {/* Cuisine Type */}
-                        <div className="input-group">
-                            <label className="input-label">Cuisine Type *</label>
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="e.g., Indian, Chinese, Fast Food"
-                                value={formData.cuisineType}
-                                onChange={(e) => setFormData({ ...formData, cuisineType: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Location */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                    {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+                            {/* Name */}
                             <div className="input-group">
-                                <label className="input-label">Building</label>
+                                <label className="input-label">Outlet Name *</label>
                                 <input
                                     type="text"
                                     className="input"
-                                    placeholder="Building name/number"
-                                    value={formData.location.building}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        location: { ...formData.location, building: e.target.value }
-                                    })}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
+
+                            {/* Description */}
                             <div className="input-group">
-                                <label className="input-label">Landmark</label>
+                                <label className="input-label">Description</label>
+                                <textarea
+                                    className="input"
+                                    rows={3}
+                                    placeholder="Tell customers about your outlet..."
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    maxLength={500}
+                                />
+                                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                                    {formData.description.length}/500 characters
+                                </span>
+                            </div>
+
+                            {/* Cuisine Type */}
+                            <div className="input-group">
+                                <label className="input-label">Cuisine Type *</label>
                                 <input
                                     type="text"
                                     className="input"
-                                    placeholder="Near..."
-                                    value={formData.location.landmark}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        location: { ...formData.location, landmark: e.target.value }
-                                    })}
+                                    placeholder="e.g., Indian, Chinese, Fast Food"
+                                    value={formData.cuisineType}
+                                    onChange={(e) => setFormData({ ...formData, cuisineType: e.target.value })}
                                 />
                             </div>
-                        </div>
 
-                        {/* Operating Hours */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
-                            <div className="input-group">
-                                <label className="input-label">Opening Time *</label>
-                                <input
-                                    type="time"
-                                    className="input"
-                                    value={formData.operatingHours.open}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        operatingHours: { ...formData.operatingHours, open: e.target.value }
-                                    })}
-                                />
+                            {/* Location */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                                <div className="input-group">
+                                    <label className="input-label">Building</label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="Building name/number"
+                                        value={formData.location.building}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            location: { ...formData.location, building: e.target.value }
+                                        })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Landmark</label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="Near..."
+                                        value={formData.location.landmark}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            location: { ...formData.location, landmark: e.target.value }
+                                        })}
+                                    />
+                                </div>
                             </div>
-                            <div className="input-group">
-                                <label className="input-label">Closing Time *</label>
-                                <input
-                                    type="time"
-                                    className="input"
-                                    value={formData.operatingHours.close}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        operatingHours: { ...formData.operatingHours, close: e.target.value }
-                                    })}
-                                />
-                            </div>
-                        </div>
 
-                        {/* Contact */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
-                            <div className="input-group">
-                                <label className="input-label">Contact Phone *</label>
-                                <input
-                                    type="tel"
-                                    className="input"
-                                    value={formData.contact.phone}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        contact: { ...formData.contact, phone: e.target.value }
-                                    })}
-                                />
+                            {/* Operating Hours */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                                <div className="input-group">
+                                    <label className="input-label">Opening Time *</label>
+                                    <input
+                                        type="time"
+                                        className="input"
+                                        value={formData.operatingHours.open}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            operatingHours: { ...formData.operatingHours, open: e.target.value }
+                                        })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Closing Time *</label>
+                                    <input
+                                        type="time"
+                                        className="input"
+                                        value={formData.operatingHours.close}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            operatingHours: { ...formData.operatingHours, close: e.target.value }
+                                        })}
+                                    />
+                                </div>
                             </div>
-                            <div className="input-group">
-                                <label className="input-label">Contact Email</label>
-                                <input
-                                    type="email"
-                                    className="input"
-                                    value={formData.contact.email}
-                                    onChange={(e) => setFormData({
-                                        ...formData,
-                                        contact: { ...formData.contact, email: e.target.value }
-                                    })}
-                                />
-                            </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
-                            <button
-                                className="btn btn-ghost"
-                                onClick={handleCancel}
-                                disabled={saving}
-                                style={{ flex: 1 }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleSave}
-                                disabled={saving}
-                                style={{ flex: 1 }}
-                            >
-                                <Save size={18} />
-                                {saving ? 'Saving...' : 'Save Changes'}
-                            </button>
+                            {/* Contact */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                                <div className="input-group">
+                                    <label className="input-label">Contact Phone *</label>
+                                    <input
+                                        type="tel"
+                                        className="input"
+                                        value={formData.contact.phone}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            contact: { ...formData.contact, phone: e.target.value }
+                                        })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label className="input-label">Contact Email</label>
+                                    <input
+                                        type="email"
+                                        className="input"
+                                        value={formData.contact.email}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            contact: { ...formData.contact, email: e.target.value }
+                                        })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={handleCancel}
+                                    disabled={saving}
+                                    style={{ flex: 1 }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    style={{ flex: 1 }}
+                                >
+                                    <Save size={18} />
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
-                        {formData.description && (
+                    ) : (
+                        <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+                            {formData.description && (
+                                <div>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Description</span>
+                                    <p style={{ fontWeight: 500 }}>{formData.description}</p>
+                                </div>
+                            )}
                             <div>
-                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Description</span>
-                                <p style={{ fontWeight: 500 }}>{formData.description}</p>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Cuisine Type</span>
+                                <p style={{ fontWeight: 500 }}>{formData.cuisineType || 'Not set'}</p>
                             </div>
-                        )}
-                        <div>
-                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Cuisine Type</span>
-                            <p style={{ fontWeight: 500 }}>{formData.cuisineType || 'Not set'}</p>
+                            <div>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Location</span>
+                                <p style={{ fontWeight: 500 }}>
+                                    {formData.location.building || 'Not set'}
+                                    {formData.location.landmark && ` • ${formData.location.landmark}`}
+                                </p>
+                            </div>
+                            <div>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Operating Hours</span>
+                                <p style={{ fontWeight: 500 }}>{formData.operatingHours.open} - {formData.operatingHours.close}</p>
+                            </div>
+                            <div>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Contact</span>
+                                <p style={{ fontWeight: 500 }}>
+                                    {formData.contact.phone}
+                                    {formData.contact.email && ` • ${formData.contact.email}`}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Location</span>
-                            <p style={{ fontWeight: 500 }}>
-                                {formData.location.building || 'Not set'}
-                                {formData.location.landmark && ` • ${formData.location.landmark}`}
-                            </p>
-                        </div>
-                        <div>
-                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Operating Hours</span>
-                            <p style={{ fontWeight: 500 }}>{formData.operatingHours.open} - {formData.operatingHours.close}</p>
-                        </div>
-                        <div>
-                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Contact</span>
-                            <p style={{ fontWeight: 500 }}>
-                                {formData.contact.phone}
-                                {formData.contact.email && ` • ${formData.contact.email}`}
-                            </p>
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );

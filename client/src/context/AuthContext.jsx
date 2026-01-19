@@ -27,9 +27,16 @@ const AuthContext = createContext(null);
 
 // Cross-platform storage utilities for WebView compatibility
 const storage = {
-    setItem: (key, value) => {
+    setItem: (key, value, rememberMe = null) => {
         try {
-            localStorage.setItem(key, value);
+            // If rememberMe is explicitly set, use it; otherwise check stored preference
+            const shouldPersist = rememberMe !== null
+                ? rememberMe
+                : localStorage.getItem('rememberMe') === 'true';
+
+            const store = shouldPersist ? localStorage : sessionStorage;
+            store.setItem(key, value);
+
             // Also post to React Native parent if in WebView
             if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -44,7 +51,8 @@ const storage = {
     },
     getItem: (key) => {
         try {
-            return localStorage.getItem(key);
+            // Check both storages
+            return localStorage.getItem(key) || sessionStorage.getItem(key);
         } catch (error) {
             console.error('Storage getItem error:', error);
             return null;
@@ -53,6 +61,7 @@ const storage = {
     removeItem: (key) => {
         try {
             localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
             // Also notify React Native parent if in WebView
             if (window.ReactNativeWebView) {
                 window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -88,7 +97,8 @@ export const AuthProvider = ({ children }) => {
             if (fbUser) {
                 try {
                     const idToken = await fbUser.getIdToken();
-                    storage.setItem('token', idToken);
+                    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+                    storage.setItem('token', idToken, rememberMe);
                     setToken(idToken);
 
                     // Fetch user profile from backend
@@ -101,7 +111,7 @@ export const AuthProvider = ({ children }) => {
             } else {
                 // Check if we have a dev token
                 const storedToken = storage.getItem('token');
-                if (storedToken === 'dev-token') {
+                if (storedToken === 'dev-token' || storedToken?.startsWith('dev-user-')) {
                     try {
                         const response = await api.get('/auth/me');
                         setUser(response.data.data);
@@ -122,7 +132,9 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         const response = await api.post('/auth/register', userData);
         if (response.data.success && response.data.data.token) {
-            storage.setItem('token', response.data.data.token);
+            // Default to remember for new registrations
+            localStorage.setItem('rememberMe', 'true');
+            storage.setItem('token', response.data.data.token, true);
             setToken(response.data.data.token);
             setUser(response.data.data.user);
         }
@@ -133,7 +145,10 @@ export const AuthProvider = ({ children }) => {
     const login = async (identifier, password, rememberMe = false) => {
         const response = await api.post('/auth/login', { identifier, password, rememberMe });
         if (response.data.success && response.data.data.token) {
-            storage.setItem('token', response.data.data.token);
+            // Store the remember me preference
+            localStorage.setItem('rememberMe', rememberMe.toString());
+            // Store token in appropriate storage
+            storage.setItem('token', response.data.data.token, rememberMe);
             setToken(response.data.data.token);
             setUser(response.data.data.user);
         }
@@ -187,6 +202,9 @@ export const AuthProvider = ({ children }) => {
 
     // Login with dev mode (for development only - skips OTP)
     const devLogin = async (identifier = null) => {
+        // Dev mode always remembers
+        localStorage.setItem('rememberMe', 'true');
+
         if (identifier) {
             // Login as specific user
             const response = await api.post('/auth/dev-login', { identifier });
@@ -194,13 +212,13 @@ export const AuthProvider = ({ children }) => {
 
             // Store a dev token with user ID
             const devToken = `dev-user-${userData._id}`;
-            storage.setItem('token', devToken);
+            storage.setItem('token', devToken, true);
             setToken(devToken);
             setUser(userData);
             return response.data;
         } else {
             // Fallback to old behavior (first user)
-            storage.setItem('token', 'dev-token');
+            storage.setItem('token', 'dev-token', true);
             setToken('dev-token');
             const response = await api.get('/auth/me');
             setUser(response.data.data);

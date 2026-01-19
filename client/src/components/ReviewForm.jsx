@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import StarRating from './StarRating';
 import toast from 'react-hot-toast';
@@ -8,6 +8,12 @@ const ReviewForm = ({ menuItemId, existingReview = null, onSuccess, onCancel }) 
     const [rating, setRating] = useState(existingReview?.rating || 0);
     const [comment, setComment] = useState(existingReview?.comment || '');
     const [loading, setLoading] = useState(false);
+
+    // Reset form when menuItemId or existingReview changes
+    useEffect(() => {
+        setRating(existingReview?.rating || 0);
+        setComment(existingReview?.comment || '');
+    }, [menuItemId, existingReview]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

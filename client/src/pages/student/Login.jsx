@@ -66,7 +66,7 @@ const Login = () => {
             <div className="student-login-card">
                 <div className="auth-header">
                     <h1 className="auth-logo">CampusCravings</h1>
-                    <p className="auth-tagline">Skip the queue, save time!</p>
+                    <p className="auth-tagline">We will satisfy your every craving</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
