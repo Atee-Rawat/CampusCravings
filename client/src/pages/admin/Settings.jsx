@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Image as ImageIcon, X, Store } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Store, Edit2, Save } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -7,6 +7,16 @@ const Settings = () => {
     const [outlet, setOutlet] = useState(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        cuisineType: '',
+        location: { building: '', landmark: '' },
+        operatingHours: { open: '', close: '' },
+        contact: { phone: '', email: '' }
+    });
 
     const token = localStorage.getItem('adminToken');
     const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -16,7 +26,26 @@ const Settings = () => {
         const fetchOutlet = async () => {
             try {
                 const response = await api.get('/admin/dashboard', config);
-                setOutlet(response.data.data.outlet);
+                const outletData = response.data.data.outlet;
+                setOutlet(outletData);
+                // Initialize form data
+                setFormData({
+                    name: outletData.name || '',
+                    description: outletData.description || '',
+                    cuisineType: outletData.cuisineType || '',
+                    location: {
+                        building: outletData.location?.building || '',
+                        landmark: outletData.location?.landmark || ''
+                    },
+                    operatingHours: {
+                        open: outletData.operatingHours?.open || '09:00',
+                        close: outletData.operatingHours?.close || '21:00'
+                    },
+                    contact: {
+                        phone: outletData.contact?.phone || '',
+                        email: outletData.contact?.email || ''
+                    }
+                });
             } catch (error) {
                 toast.error('Failed to load outlet data');
             } finally {
@@ -62,6 +91,49 @@ const Settings = () => {
         }
     };
 
+    // Start editing
+    const handleEdit = () => {
+        setIsEditing(true);
+    };
+
+    // Cancel editing
+    const handleCancel = () => {
+        setIsEditing(false);
+        // Reset form data to outlet values
+        setFormData({
+            name: outlet.name || '',
+            description: outlet.description || '',
+            cuisineType: outlet.cuisineType || '',
+            location: {
+                building: outlet.location?.building || '',
+                landmark: outlet.location?.landmark || ''
+            },
+            operatingHours: {
+                open: outlet.operatingHours?.open || '09:00',
+                close: outlet.operatingHours?.close || '21:00'
+            },
+            contact: {
+                phone: outlet.contact?.phone || '',
+                email: outlet.contact?.email || ''
+            }
+        });
+    };
+
+    // Save changes
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const response = await api.put('/admin/outlet', formData, config);
+            setOutlet(response.data.data.outlet);
+            setIsEditing(false);
+            toast.success('Outlet information updated!');
+        } catch (error) {
+            toast.error(error.message || 'Failed to update outlet');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="loading-screen">
@@ -72,9 +144,17 @@ const Settings = () => {
 
     return (
         <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-xl)' }}>
-                Outlet Settings
-            </h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xl)' }}>
+                <h1 style={{ fontSize: 'var(--font-size-2xl)' }}>
+                    Outlet Settings
+                </h1>
+                {!isEditing && (
+                    <button className="btn btn-primary" onClick={handleEdit}>
+                        <Edit2 size={18} />
+                        Edit Outlet Info
+                    </button>
+                )}
+            </div>
 
             {/* Outlet Info Card */}
             <div style={{
@@ -153,34 +233,196 @@ const Settings = () => {
                 </div>
             </div>
 
-            {/* Other Settings */}
+            {/* Outlet Information */}
             <div style={{
                 background: 'var(--bg-card)',
                 borderRadius: 'var(--radius-lg)',
                 padding: 'var(--space-xl)'
             }}>
-                <h3 style={{ fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-md)' }}>
+                <h3 style={{ fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-lg)' }}>
                     Outlet Information
                 </h3>
 
-                <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
-                    <div>
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Cuisine Type</span>
-                        <p style={{ fontWeight: 500 }}>{outlet?.cuisineType || 'Not set'}</p>
-                    </div>
-                    <div>
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Location</span>
-                        <p style={{ fontWeight: 500 }}>{outlet?.location?.building || 'Not set'}</p>
-                    </div>
-                    <div>
-                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Operating Hours</span>
-                        <p style={{ fontWeight: 500 }}>{outlet?.operatingHours?.open} - {outlet?.operatingHours?.close}</p>
-                    </div>
-                </div>
+                {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+                        {/* Name */}
+                        <div className="input-group">
+                            <label className="input-label">Outlet Name *</label>
+                            <input
+                                type="text"
+                                className="input"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            />
+                        </div>
 
-                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)', marginTop: 'var(--space-lg)' }}>
-                    Contact support to update other outlet details.
-                </p>
+                        {/* Description */}
+                        <div className="input-group">
+                            <label className="input-label">Description</label>
+                            <textarea
+                                className="input"
+                                rows={3}
+                                placeholder="Tell customers about your outlet..."
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                maxLength={500}
+                            />
+                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                                {formData.description.length}/500 characters
+                            </span>
+                        </div>
+
+                        {/* Cuisine Type */}
+                        <div className="input-group">
+                            <label className="input-label">Cuisine Type *</label>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="e.g., Indian, Chinese, Fast Food"
+                                value={formData.cuisineType}
+                                onChange={(e) => setFormData({ ...formData, cuisineType: e.target.value })}
+                            />
+                        </div>
+
+                        {/* Location */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                            <div className="input-group">
+                                <label className="input-label">Building</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="Building name/number"
+                                    value={formData.location.building}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        location: { ...formData.location, building: e.target.value }
+                                    })}
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Landmark</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="Near..."
+                                    value={formData.location.landmark}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        location: { ...formData.location, landmark: e.target.value }
+                                    })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Operating Hours */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                            <div className="input-group">
+                                <label className="input-label">Opening Time *</label>
+                                <input
+                                    type="time"
+                                    className="input"
+                                    value={formData.operatingHours.open}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        operatingHours: { ...formData.operatingHours, open: e.target.value }
+                                    })}
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Closing Time *</label>
+                                <input
+                                    type="time"
+                                    className="input"
+                                    value={formData.operatingHours.close}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        operatingHours: { ...formData.operatingHours, close: e.target.value }
+                                    })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Contact */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+                            <div className="input-group">
+                                <label className="input-label">Contact Phone *</label>
+                                <input
+                                    type="tel"
+                                    className="input"
+                                    value={formData.contact.phone}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        contact: { ...formData.contact, phone: e.target.value }
+                                    })}
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Contact Email</label>
+                                <input
+                                    type="email"
+                                    className="input"
+                                    value={formData.contact.email}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        contact: { ...formData.contact, email: e.target.value }
+                                    })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
+                            <button
+                                className="btn btn-ghost"
+                                onClick={handleCancel}
+                                disabled={saving}
+                                style={{ flex: 1 }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSave}
+                                disabled={saving}
+                                style={{ flex: 1 }}
+                            >
+                                <Save size={18} />
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+                        {formData.description && (
+                            <div>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Description</span>
+                                <p style={{ fontWeight: 500 }}>{formData.description}</p>
+                            </div>
+                        )}
+                        <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Cuisine Type</span>
+                            <p style={{ fontWeight: 500 }}>{formData.cuisineType || 'Not set'}</p>
+                        </div>
+                        <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Location</span>
+                            <p style={{ fontWeight: 500 }}>
+                                {formData.location.building || 'Not set'}
+                                {formData.location.landmark && ` • ${formData.location.landmark}`}
+                            </p>
+                        </div>
+                        <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Operating Hours</span>
+                            <p style={{ fontWeight: 500 }}>{formData.operatingHours.open} - {formData.operatingHours.close}</p>
+                        </div>
+                        <div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>Contact</span>
+                            <p style={{ fontWeight: 500 }}>
+                                {formData.contact.phone}
+                                {formData.contact.email && ` • ${formData.contact.email}`}
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
