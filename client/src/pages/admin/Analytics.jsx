@@ -226,37 +226,46 @@ const Analytics = () => {
                 borderRadius: 'var(--radius-lg)',
                 padding: 'var(--space-lg)',
                 marginBottom: 'var(--space-xl)',
-                border: '1px solid var(--border-subtle)'
+                border: '1px solid var(--border-subtle)',
+                position: 'relative'
             }} className="admin-card-stagger">
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: 'var(--space-lg)'
+                    marginBottom: 'var(--space-lg)',
+                    minHeight: 32
                 }}>
                     <h2 style={{ fontSize: 'var(--font-size-lg)' }}>
                         Daily Revenue - {months[selectedMonth]} {selectedYear}
                     </h2>
-                    {hoveredBar && (
-                        <div
-                            className="chart-tooltip"
-                            onMouseEnter={handleTooltipEnter}
-                            onMouseLeave={handleTooltipLeave}
-                            style={{
-                                background: 'var(--bg-elevated)',
-                                padding: 'var(--space-sm) var(--space-md)',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border-light)',
-                                fontSize: 'var(--font-size-sm)',
-                                pointerEvents: 'auto'
-                            }}
-                        >
-                            <strong>{hoveredBar.date}</strong><br />
-                            Revenue: ₹{(hoveredBar.revenue / 100).toFixed(0)}<br />
-                            Orders: {hoveredBar.orders}
-                        </div>
-                    )}
                 </div>
+
+                {/* Absolute positioned tooltip overlay */}
+                {hoveredBar && (
+                    <div
+                        className="chart-tooltip"
+                        onMouseEnter={handleTooltipEnter}
+                        onMouseLeave={handleTooltipLeave}
+                        style={{
+                            position: 'absolute',
+                            top: 80,
+                            right: 'var(--space-lg)',
+                            background: 'var(--bg-elevated)',
+                            padding: 'var(--space-sm) var(--space-md)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-light)',
+                            fontSize: 'var(--font-size-sm)',
+                            pointerEvents: 'auto',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 10
+                        }}
+                    >
+                        <strong>{hoveredBar.date}</strong><br />
+                        Revenue: ₹{(hoveredBar.revenue / 100).toFixed(0)}<br />
+                        Orders: {hoveredBar.orders}
+                    </div>
+                )}
 
                 {chartData && chartData.length > 0 ? (
                     <div style={{

@@ -188,14 +188,21 @@ router.put('/orders/:id/accept', verifyOutletAdmin, async (req, res) => {
 
         await order.accept();
 
-        // Emit socket event to student
+        // Emit socket event to student and admin dashboard
         const io = req.app.get('io');
-        io.to(`order-${order._id}`).emit('order-accepted', {
-            orderId: order._id,
-            status: 'accepted',
-            estimatedReadyAt: order.estimatedReadyAt,
-            remainingSeconds: order.remainingSeconds
-        });
+        if (io) {
+            io.to(`order-${order._id}`).emit('order-accepted', {
+                orderId: order._id,
+                status: 'accepted',
+                estimatedReadyAt: order.estimatedReadyAt,
+                remainingSeconds: order.remainingSeconds
+            });
+            // Notify admin dashboard
+            io.to(`outlet-${req.outlet._id}`).emit('order-status-changed', {
+                orderId: order._id,
+                status: 'accepted'
+            });
+        }
 
         res.json({
             success: true,
@@ -232,13 +239,23 @@ router.put('/orders/:id/ready', verifyOutletAdmin, async (req, res) => {
 
         await order.markReady();
 
-        // Emit socket event
+        // Emit socket event to student and admin dashboard
         const io = req.app.get('io');
-        io.to(`order-${order._id}`).emit('order-ready', {
-            orderId: order._id,
-            status: 'ready',
-            message: 'Your order is ready for pickup!'
-        });
+        if (io) {
+            io.to(`order-${order._id}`).emit('order-ready', {
+                orderId: order._id,
+                status: 'ready',
+                message: 'Your order is ready for pickup!'
+            });
+            // Notify admin dashboard and update queue
+            io.to(`outlet-${req.outlet._id}`).emit('order-status-changed', {
+                orderId: order._id,
+                status: 'ready'
+            });
+            io.to(`outlet-${req.outlet._id}`).emit('queue-update', {
+                readyToken: order.tokenNumber
+            });
+        }
 
         res.json({
             success: true,
@@ -275,10 +292,14 @@ router.put('/orders/:id/complete', verifyOutletAdmin, async (req, res) => {
 
         await order.complete();
 
-        // Update user's favorite items
-        const user = await User.findById(order.user);
-        for (const item of order.items) {
-            await user.updateFavorite(item.menuItem);
+        // Update user's favorite items (only for online orders with users)
+        if (order.user) {
+            const user = await User.findById(order.user);
+            if (user) {
+                for (const item of order.items) {
+                    await user.updateFavorite(item.menuItem);
+                }
+            }
         }
 
         // Update outlet stats
@@ -288,6 +309,18 @@ router.put('/orders/:id/complete', verifyOutletAdmin, async (req, res) => {
                 'stats.totalRevenue': order.totalAmount
             }
         });
+
+        // Emit socket events to update dashboard
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`outlet-${req.outlet._id}`).emit('order-completed', {
+                orderId: order._id,
+                status: 'completed'
+            });
+            io.to(`outlet-${req.outlet._id}`).emit('queue-update', {
+                completedToken: order.tokenNumber
+            });
+        }
 
         res.json({
             success: true,
@@ -490,6 +523,58 @@ router.put('/outlet/toggle-status', verifyOutletAdmin, async (req, res) => {
         });
     }
 });
+
+// @route   PUT /api/admin/outlet
+// @desc    Update outlet information
+// @access  Private (Outlet Admin)
+router.put('/outlet', verifyOutletAdmin, [
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('description').optional().trim().isLength({ max: 500 }).withMessage('Description max 500 characters'),
+    body('cuisineType').optional().trim().notEmpty().withMessage('Cuisine type cannot be empty'),
+    body('location.building').optional().trim(),
+    body('location.landmark').optional().trim(),
+    body('operatingHours.open').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Invalid time format'),
+    body('operatingHours.close').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Invalid time format'),
+    body('contact.phone').optional().trim(),
+    body('contact.email').optional().isEmail().withMessage('Invalid email'),
+    validate
+], async (req, res) => {
+    try {
+        const allowedUpdates = [
+            'name', 'description', 'cuisineType', 'location',
+            'operatingHours', 'contact'
+        ];
+
+        const updates = {};
+        allowedUpdates.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        // Update the outlet
+        const outlet = await Outlet.findByIdAndUpdate(
+            req.outlet._id,
+            updates,
+            { new: true, runValidators: true }
+        ).populate('university');
+
+        res.json({
+            success: true,
+            message: 'Outlet information updated',
+            data: { outlet }
+        });
+
+    } catch (error) {
+        console.error('Update outlet error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update outlet information'
+        });
+    }
+});
+
+
 
 // @route   GET /api/admin/menu
 // @desc    Get all menu items for the outlet

@@ -337,6 +337,55 @@ const MenuManager = () => {
                                         </p>
                                     )}
 
+                                    {/* Ratings Display */}
+                                    {item.reviewCount > 0 ? (
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 'var(--space-xs)',
+                                            marginBottom: 'var(--space-sm)'
+                                        }}>
+                                            <div style={{ display: 'flex', gap: 2 }}>
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <svg
+                                                        key={star}
+                                                        width="14"
+                                                        height="14"
+                                                        viewBox="0 0 24 24"
+                                                        fill={star <= Math.round(item.averageRating) ? '#FFB800' : 'none'}
+                                                        stroke={star <= Math.round(item.averageRating) ? '#FFB800' : 'var(--border-subtle)'}
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    >
+                                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                                    </svg>
+                                                ))}
+                                            </div>
+                                            <span style={{
+                                                fontSize: 'var(--font-size-sm)',
+                                                fontWeight: 600,
+                                                color: 'var(--text-primary)'
+                                            }}>
+                                                {item.averageRating.toFixed(1)}
+                                            </span>
+                                            <span style={{
+                                                fontSize: 'var(--font-size-xs)',
+                                                color: 'var(--text-muted)'
+                                            }}>
+                                                ({item.reviewCount} {item.reviewCount === 1 ? 'review' : 'reviews'})
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            fontSize: 'var(--font-size-xs)',
+                                            color: 'var(--text-muted)',
+                                            marginBottom: 'var(--space-sm)'
+                                        }}>
+                                            No reviews yet
+                                        </div>
+                                    )}
+
                                     <div style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',

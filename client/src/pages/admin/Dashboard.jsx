@@ -78,6 +78,41 @@ const Dashboard = () => {
                 audio.play();
             } catch (e) { }
             setOrders(prev => [data.order, ...prev]);
+            fetchQueueStatus(); // Refresh queue status
+        });
+
+        // Listen for order status changes
+        newSocket.on('order-status-changed', (data) => {
+            console.log('Order status changed:', data);
+            setOrders(prev => prev.map(o =>
+                o._id === data.orderId ? { ...o, status: data.status } : o
+            ));
+            fetchQueueStatus(); // Refresh queue status
+        });
+
+        // Listen for order ready events
+        newSocket.on('order-ready', (data) => {
+            console.log('Order ready:', data);
+            setOrders(prev => prev.map(o =>
+                o._id === data.orderId ? { ...o, status: 'ready' } : o
+            ));
+            fetchQueueStatus(); // Refresh queue status
+        });
+
+        // Listen for order completed events
+        newSocket.on('order-completed', (data) => {
+            console.log('Order completed:', data);
+            setOrders(prev => prev.map(o =>
+                o._id === data.orderId ? { ...o, status: 'completed' } : o
+            ));
+            fetchData(); // Refresh stats as completed count changed
+            fetchQueueStatus(); // Refresh queue status
+        });
+
+        // Listen for queue updates
+        newSocket.on('queue-update', (data) => {
+            console.log('Queue update:', data);
+            fetchQueueStatus(); // Refresh queue status
         });
 
         setSocket(newSocket);
@@ -85,7 +120,7 @@ const Dashboard = () => {
         return () => {
             newSocket.disconnect();
         };
-    }, [outlet.id]);
+    }, [outlet.id, fetchData, fetchQueueStatus]);
 
     // Toggle outlet status
     const toggleStatus = async () => {

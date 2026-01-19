@@ -49,6 +49,11 @@ const orderSchema = new mongoose.Schema({
     payment: {
         razorpayOrderId: String,
         razorpayPaymentId: String,
+        method: {
+            type: String,
+            enum: ['razorpay', 'cash', 'upi', 'card'],
+            default: 'razorpay'
+        },
         status: {
             type: String,
             enum: ['pending', 'paid', 'failed', 'refunded'],

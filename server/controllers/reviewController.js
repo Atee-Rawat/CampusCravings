@@ -64,7 +64,7 @@ exports.createReview = async (req, res) => {
         });
 
         // Populate user info before sending response
-        await review.populate('user', 'name email');
+        await review.populate('user', 'fullName email profileImage');
 
         res.status(201).json({
             success: true,
@@ -97,7 +97,7 @@ exports.getItemReviews = async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const reviews = await Review.find({ menuItem: menuItemId })
-            .populate('user', 'name email')
+            .populate('user', 'fullName email profileImage')
             .sort(sortOption)
             .skip(skip)
             .limit(parseInt(limit));
@@ -148,7 +148,7 @@ exports.getOutletReviews = async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const reviews = await Review.find({ outlet: outletId })
-            .populate('user', 'name email')
+            .populate('user', 'fullName email profileImage')
             .populate('menuItem', 'name')
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -215,7 +215,7 @@ exports.updateReview = async (req, res) => {
             reviewCount: stats.count
         });
 
-        await review.populate('user', 'name email');
+        await review.populate('user', 'fullName email profileImage');
 
         res.json({
             success: true,
@@ -338,7 +338,7 @@ exports.getUserItemReview = async (req, res) => {
         const review = await Review.findOne({
             user: userId,
             menuItem: menuItemId
-        }).populate('user', 'name email');
+        }).populate('user', 'fullName email profileImage');
 
         res.json({
             success: true,

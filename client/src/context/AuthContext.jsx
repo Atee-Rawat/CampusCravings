@@ -25,6 +25,47 @@ const auth = getAuth(app);
 
 const AuthContext = createContext(null);
 
+// Cross-platform storage utilities for WebView compatibility
+const storage = {
+    setItem: (key, value) => {
+        try {
+            localStorage.setItem(key, value);
+            // Also post to React Native parent if in WebView
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'SAVE_TOKEN',
+                    key,
+                    value
+                }));
+            }
+        } catch (error) {
+            console.error('Storage setItem error:', error);
+        }
+    },
+    getItem: (key) => {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            console.error('Storage getItem error:', error);
+            return null;
+        }
+    },
+    removeItem: (key) => {
+        try {
+            localStorage.removeItem(key);
+            // Also notify React Native parent if in WebView
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'REMOVE_TOKEN',
+                    key
+                }));
+            }
+        } catch (error) {
+            console.error('Storage removeItem error:', error);
+        }
+    }
+};
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -37,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [firebaseUser, setFirebaseUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [token, setToken] = useState(storage.getItem('token'));
 
     // Listen for Firebase auth state changes
     useEffect(() => {
@@ -47,7 +88,7 @@ export const AuthProvider = ({ children }) => {
             if (fbUser) {
                 try {
                     const idToken = await fbUser.getIdToken();
-                    localStorage.setItem('token', idToken);
+                    storage.setItem('token', idToken);
                     setToken(idToken);
 
                     // Fetch user profile from backend
@@ -59,13 +100,13 @@ export const AuthProvider = ({ children }) => {
                 }
             } else {
                 // Check if we have a dev token
-                const storedToken = localStorage.getItem('token');
+                const storedToken = storage.getItem('token');
                 if (storedToken === 'dev-token') {
                     try {
                         const response = await api.get('/auth/me');
                         setUser(response.data.data);
                     } catch (error) {
-                        localStorage.removeItem('token');
+                        storage.removeItem('token');
                         setToken(null);
                     }
                 }
@@ -81,7 +122,7 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         const response = await api.post('/auth/register', userData);
         if (response.data.success && response.data.data.token) {
-            localStorage.setItem('token', response.data.data.token);
+            storage.setItem('token', response.data.data.token);
             setToken(response.data.data.token);
             setUser(response.data.data.user);
         }
@@ -92,7 +133,7 @@ export const AuthProvider = ({ children }) => {
     const login = async (identifier, password, rememberMe = false) => {
         const response = await api.post('/auth/login', { identifier, password, rememberMe });
         if (response.data.success && response.data.data.token) {
-            localStorage.setItem('token', response.data.data.token);
+            storage.setItem('token', response.data.data.token);
             setToken(response.data.data.token);
             setUser(response.data.data.user);
         }
@@ -153,13 +194,13 @@ export const AuthProvider = ({ children }) => {
 
             // Store a dev token with user ID
             const devToken = `dev-user-${userData._id}`;
-            localStorage.setItem('token', devToken);
+            storage.setItem('token', devToken);
             setToken(devToken);
             setUser(userData);
             return response.data;
         } else {
             // Fallback to old behavior (first user)
-            localStorage.setItem('token', 'dev-token');
+            storage.setItem('token', 'dev-token');
             setToken('dev-token');
             const response = await api.get('/auth/me');
             setUser(response.data.data);
@@ -174,7 +215,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             // Firebase might not be configured
         }
-        localStorage.removeItem('token');
+        storage.removeItem('token');
         setToken(null);
         setUser(null);
         setFirebaseUser(null);
