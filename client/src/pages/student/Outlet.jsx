@@ -420,7 +420,7 @@ const Outlet = () => {
                                                 </button>
                                             </div>
                                         )}
-                                        {item.averageRating === 0 && user && (
+                                        {(!item.reviewCount || item.reviewCount === 0) && user && (
                                             <button
                                                 onClick={() => setReviewsModalItem(item)}
                                                 style={{
@@ -558,22 +558,47 @@ const Outlet = () => {
                             position: 'sticky',
                             top: 0,
                             background: 'var(--bg-primary)',
-                            padding: 'var(--space-lg)',
+                            padding: 'var(--space-md) var(--space-lg)',
+                            paddingRight: '52px', // Space for close button
                             borderBottom: '1px solid var(--border-subtle)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            zIndex: 10
+                            zIndex: 10,
+                            minHeight: '56px'
                         }}>
-                            <h2 style={{ fontSize: 'var(--font-size-xl)', margin: 0 }}>
+                            <h2 style={{
+                                fontSize: 'var(--font-size-lg)',
+                                margin: 0,
+                                paddingRight: 'var(--space-sm)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1
+                            }}>
                                 {reviewsModalItem.name}
                             </h2>
                             <button
                                 onClick={() => setReviewsModalItem(null)}
                                 className="btn btn-ghost btn-icon"
-                                style={{ width: 40, height: 40 }}
+                                style={{
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: 36,
+                                    height: 36,
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                    flexShrink: 0,
+                                    padding: 8,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                aria-label="Close"
                             >
-                                <X size={20} />
+                                <X size={16} />
                             </button>
                         </div>
 

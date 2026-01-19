@@ -231,9 +231,20 @@ const Dashboard = () => {
                 alignItems: 'center',
                 marginBottom: 'var(--space-xl)'
             }}>
-                <div>
-                    <h1 style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 4 }}>Dashboard</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>Welcome back!</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    <img
+                        src="/CC_logo.png"
+                        alt="CampusCravings Logo"
+                        style={{
+                            height: '60px',
+                            width: 'auto',
+                            objectFit: 'contain'
+                        }}
+                    />
+                    <div>
+                        <h1 style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 4 }}>Dashboard</h1>
+                        <p style={{ color: 'var(--text-secondary)' }}>Welcome back!</p>
+                    </div>
                 </div>
 
                 <button

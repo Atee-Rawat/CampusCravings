@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const CartContext = createContext(null);
 
@@ -13,17 +15,25 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
     const [items, setItems] = useState([]);
     const [outlet, setOutlet] = useState(null);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [discount, setDiscount] = useState(0);
 
     // Load cart from localStorage
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
         const savedOutlet = localStorage.getItem('cartOutlet');
+        const savedCoupon = localStorage.getItem('cartCoupon');
 
         if (savedCart) {
             setItems(JSON.parse(savedCart));
         }
         if (savedOutlet) {
             setOutlet(JSON.parse(savedOutlet));
+        }
+        if (savedCoupon) {
+            const couponData = JSON.parse(savedCoupon);
+            setAppliedCoupon(couponData.coupon);
+            setDiscount(couponData.discount);
         }
     }, []);
 
@@ -44,6 +54,14 @@ export const CartProvider = ({ children }) => {
         }
     }, [outlet]);
 
+    useEffect(() => {
+        if (appliedCoupon && discount > 0) {
+            localStorage.setItem('cartCoupon', JSON.stringify({ coupon: appliedCoupon, discount }));
+        } else {
+            localStorage.removeItem('cartCoupon');
+        }
+    }, [appliedCoupon, discount]);
+
     // Add item to cart
     const addItem = (item, outletInfo) => {
         // If cart has items from different outlet, clear it first
@@ -52,6 +70,8 @@ export const CartProvider = ({ children }) => {
                 return false;
             }
             setItems([]);
+            setAppliedCoupon(null);
+            setDiscount(0);
         }
 
         setOutlet(outletInfo);
@@ -81,6 +101,8 @@ export const CartProvider = ({ children }) => {
 
             if (updated.length === 0) {
                 setOutlet(null);
+                setAppliedCoupon(null);
+                setDiscount(0);
             }
 
             return updated;
@@ -130,12 +152,44 @@ export const CartProvider = ({ children }) => {
         }
     };
 
+    // Apply coupon
+    const applyCoupon = async (code) => {
+        if (!outlet) {
+            toast.error('Cart is empty');
+            return false;
+        }
+
+        const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        try {
+            const response = await api.get(`/menu/coupons/validate/${code}?outletId=${outlet._id}&orderAmount=${subtotal}`);
+
+            setAppliedCoupon(response.data.data.coupon);
+            setDiscount(response.data.data.discount);
+            toast.success(`Coupon applied! You saved ₹${(response.data.data.discount / 100).toFixed(0)}`);
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Invalid coupon code');
+            return false;
+        }
+    };
+
+    // Remove coupon
+    const removeCoupon = () => {
+        setAppliedCoupon(null);
+        setDiscount(0);
+        toast.success('Coupon removed');
+    };
+
     // Clear cart
     const clearCart = () => {
         setItems([]);
         setOutlet(null);
+        setAppliedCoupon(null);
+        setDiscount(0);
         localStorage.removeItem('cart');
         localStorage.removeItem('cartOutlet');
+        localStorage.removeItem('cartCoupon');
     };
 
     // Get item quantity
@@ -149,7 +203,11 @@ export const CartProvider = ({ children }) => {
 
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+    const total = subtotal - discount;
+
     const formattedSubtotal = `₹${(subtotal / 100).toFixed(2)}`;
+    const formattedDiscount = `₹${(discount / 100).toFixed(2)}`;
+    const formattedTotal = `₹${(total / 100).toFixed(2)}`;
 
     // Get max prep time
     const maxPrepTime = items.length > 0
@@ -161,14 +219,21 @@ export const CartProvider = ({ children }) => {
         outlet,
         itemCount,
         subtotal,
+        discount,
+        total,
         formattedSubtotal,
+        formattedDiscount,
+        formattedTotal,
         maxPrepTime,
+        appliedCoupon,
         addItem,
         removeItem,
         updateQuantity,
         incrementQuantity,
         decrementQuantity,
         getItemQuantity,
+        applyCoupon,
+        removeCoupon,
         clearCart,
         isEmpty: items.length === 0
     };

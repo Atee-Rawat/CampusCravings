@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 const Checkout = () => {
     const navigate = useNavigate();
-    const { items, outlet, subtotal, formattedSubtotal, maxPrepTime, clearCart, isEmpty } = useCart();
+    const { items, outlet, subtotal, total, formattedSubtotal, formattedTotal, formattedDiscount, discount, appliedCoupon, maxPrepTime, clearCart, isEmpty } = useCart();
     const [loading, setLoading] = useState(false);
     const [specialInstructions, setSpecialInstructions] = useState('');
 
@@ -194,6 +194,33 @@ const Checkout = () => {
                     </div>
                 ))}
 
+                {/* Coupon Display */}
+                {appliedCoupon && discount > 0 && (
+                    <div style={{
+                        padding: 'var(--space-sm)',
+                        background: 'var(--success-bg)',
+                        borderRadius: 'var(--radius-sm)',
+                        marginTop: 'var(--space-sm)',
+                        marginBottom: 'var(--space-sm)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--font-size-sm)' }}>
+                            <div>
+                                <p style={{ fontWeight: 600, color: 'var(--success)' }}>
+                                    Coupon: {appliedCoupon.code}
+                                </p>
+                                {appliedCoupon.description && (
+                                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                        {appliedCoupon.description}
+                                    </p>
+                                )}
+                            </div>
+                            <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                                -{formattedDiscount}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -203,7 +230,7 @@ const Checkout = () => {
                     fontWeight: 700
                 }}>
                     <span>Total</span>
-                    <span style={{ color: 'var(--primary-500)' }}>{formattedSubtotal}</span>
+                    <span style={{ color: 'var(--primary-500)' }}>{formattedTotal}</span>
                 </div>
             </div>
 
@@ -283,7 +310,7 @@ const Checkout = () => {
                     ) : (
                         <>
                             <CreditCard size={20} />
-                            Pay {formattedSubtotal}
+                            Pay {formattedTotal}
                         </>
                     )}
                 </button>

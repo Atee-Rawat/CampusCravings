@@ -56,20 +56,6 @@ const Profile = () => {
                 marginBottom: 'var(--space-lg)',
                 textAlign: 'center'
             }}>
-                <div style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: '50%',
-                    background: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto var(--space-md)',
-                    fontSize: '2rem'
-                }}>
-                    {user?.fullName?.charAt(0).toUpperCase() || '👤'}
-                </div>
-
                 {editing ? (
                     <div style={{
                         display: 'flex',

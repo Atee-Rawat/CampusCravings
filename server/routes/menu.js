@@ -136,4 +136,96 @@ router.get('/search', verifyToken, async (req, res) => {
     }
 });
 
+// @route   GET /api/menu/coupons/validate/:code
+// @desc   Validate and apply coupon code
+// @access  Private
+router.get('/coupons/validate/:code', verifyToken, async (req, res) => {
+    try {
+        const { code } = req.params;
+        const { outletId, orderAmount } = req.query;
+
+        if (!outletId || !orderAmount) {
+            return res.status(400).json({
+                success: false,
+                message: 'Outlet ID and order amount are required'
+            });
+        }
+
+        const Coupon = require('../models/Coupon');
+
+        // Find coupon by code and outlet (case insensitive)
+        const coupon = await Coupon.findOne({
+            code: code.toUpperCase(),
+            outlet: outletId
+        });
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invalid coupon code'
+            });
+        }
+
+        // Check if coupon is active
+        if (!coupon.isActive) {
+            return res.status(400).json({
+                success: false,
+                message: 'This coupon is no longer active'
+            });
+        }
+
+        // Check expiry
+        if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+            return res.status(400).json({
+                success: false,
+                message: 'This coupon has expired'
+            });
+        }
+
+        // Check usage limit
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+            return res.status(400).json({
+                success: false,
+                message: 'This coupon has reached its usage limit'
+            });
+        }
+
+        const amount = parseInt(orderAmount);
+
+        // Check minimum order amount
+        if (amount < coupon.minOrderAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Minimum order amount of ₹${(coupon.minOrderAmount / 100).toFixed(0)} required for this coupon`
+            });
+        }
+
+        // Calculate discount
+        const discount = coupon.calculateDiscount(amount);
+
+        res.json({
+            success: true,
+            data: {
+                coupon: {
+                    code: coupon.code,
+                    description: coupon.description,
+                    discountType: coupon.discountType,
+                    discountValue: coupon.discountValue,
+                    minOrderAmount: coupon.minOrderAmount,
+                    maxDiscount: coupon.maxDiscount
+                },
+                discount,
+                finalAmount: amount - discount
+            }
+        });
+
+    } catch (error) {
+        console.error('Coupon validation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to validate coupon'
+        });
+    }
+});
+
 module.exports = router;
