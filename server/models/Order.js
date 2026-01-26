@@ -49,9 +49,10 @@ const orderSchema = new mongoose.Schema({
     payment: {
         razorpayOrderId: String,
         razorpayPaymentId: String,
+        transactionId: String,
         method: {
             type: String,
-            enum: ['razorpay', 'cash', 'upi', 'card'],
+            enum: ['razorpay', 'cash', 'upi', 'card', 'dev-bypass'],
             default: 'razorpay'
         },
         status: {
