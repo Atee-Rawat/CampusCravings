@@ -10,7 +10,7 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { login, devLogin } = useAuth();
+    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -47,15 +47,17 @@ const Login = () => {
         }
     };
 
-    // Dev login for testing
-    const handleDevLogin = async () => {
+    // Demo login - uses the demo account
+    const handleDemoLogin = async () => {
         setLoading(true);
         try {
-            await devLogin();
-            toast.success('Logged in as demo user');
-            navigate('/');
+            const result = await login('rawatateeshay@gmail.com', '70785@Ar', true);
+            if (result.success) {
+                toast.success('Welcome back!');
+                navigate('/');
+            }
         } catch (error) {
-            toast.error('Dev login failed. Make sure backend is running.');
+            toast.error(error.message || 'Demo login failed');
         } finally {
             setLoading(false);
         }
@@ -194,11 +196,11 @@ const Login = () => {
 
                 <button
                     className="btn btn-ghost btn-block"
-                    onClick={handleDevLogin}
+                    onClick={handleDemoLogin}
                     disabled={loading}
                     style={{ marginBottom: 'var(--space-md)' }}
                 >
-                    Demo Login (Development)
+                    Demo Login
                 </button>
 
                 <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>

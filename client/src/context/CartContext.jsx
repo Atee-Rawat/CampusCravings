@@ -63,9 +63,13 @@ export const CartProvider = ({ children }) => {
     }, [appliedCoupon, discount]);
 
     // Add item to cart
+    const _getId = (x) => (x?._id || x?.id || (typeof x === 'string' ? x : null));
+
     const addItem = (item, outletInfo) => {
+        const normalizedOutlet = outletInfo || item?.outlet || null;
+
         // If cart has items from different outlet, clear it first
-        if (outlet && outlet._id !== outletInfo._id) {
+        if (outlet && normalizedOutlet && _getId(outlet) !== _getId(normalizedOutlet)) {
             if (!window.confirm('Your cart has items from another outlet. Clear cart and add this item?')) {
                 return false;
             }
@@ -74,10 +78,10 @@ export const CartProvider = ({ children }) => {
             setDiscount(0);
         }
 
-        setOutlet(outletInfo);
+        setOutlet(normalizedOutlet);
 
         setItems(prev => {
-            const existingIndex = prev.findIndex(i => i._id === item._id);
+            const existingIndex = prev.findIndex(i => _getId(i) === _getId(item));
 
             if (existingIndex > -1) {
                 const updated = [...prev];
@@ -96,8 +100,9 @@ export const CartProvider = ({ children }) => {
 
     // Remove item from cart
     const removeItem = (itemId) => {
+        const idToRemove = _getId({ _id: itemId });
         setItems(prev => {
-            const updated = prev.filter(i => i._id !== itemId);
+            const updated = prev.filter(i => _getId(i) !== idToRemove);
 
             if (updated.length === 0) {
                 setOutlet(null);
@@ -118,7 +123,7 @@ export const CartProvider = ({ children }) => {
 
         setItems(prev =>
             prev.map(item =>
-                item._id === itemId
+                _getId(item) === _getId({ _id: itemId })
                     ? { ...item, quantity }
                     : item
             )
@@ -129,7 +134,7 @@ export const CartProvider = ({ children }) => {
     const incrementQuantity = (itemId) => {
         setItems(prev =>
             prev.map(item =>
-                item._id === itemId
+                _getId(item) === _getId({ _id: itemId })
                     ? { ...item, quantity: item.quantity + 1 }
                     : item
             )
@@ -138,13 +143,13 @@ export const CartProvider = ({ children }) => {
 
     // Decrement quantity
     const decrementQuantity = (itemId) => {
-        const item = items.find(i => i._id === itemId);
+        const item = items.find(i => _getId(i) === _getId({ _id: itemId }));
         if (item && item.quantity === 1) {
             removeItem(itemId);
         } else {
             setItems(prev =>
                 prev.map(item =>
-                    item._id === itemId
+                    _getId(item) === _getId({ _id: itemId })
                         ? { ...item, quantity: item.quantity - 1 }
                         : item
                 )
@@ -194,7 +199,7 @@ export const CartProvider = ({ children }) => {
 
     // Get item quantity
     const getItemQuantity = (itemId) => {
-        const item = items.find(i => i._id === itemId);
+        const item = items.find(i => _getId(i) === _getId({ _id: itemId }));
         return item ? item.quantity : 0;
     };
 

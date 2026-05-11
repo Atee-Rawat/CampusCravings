@@ -62,7 +62,42 @@ const userSchema = new mongoose.Schema({
     },
     // Password reset fields
     passwordResetToken: String,
-    passwordResetExpires: Date
+    passwordResetExpires: Date,
+    
+    // Health and Personalization Fields for Recommendation Engine
+    healthGoals: [{
+        type: String,
+        enum: ['weight_loss', 'muscle_gain', 'diabetic', 'balanced', 'vegan', 'vegetarian', 'pescatarian', 'keto', 'gluten_free'],
+        default: 'balanced'
+    }],
+    dietaryPreferences: [{
+        type: String,
+        trim: true
+    }],
+    allergies: [{
+        type: String,
+        trim: true
+    }],
+    budgetPerMeal: {
+        type: Number,
+        default: 500,  // in INR (paise)
+        min: [0, 'Budget cannot be negative']
+    },
+    dailyCalorieTarget: {
+        type: Number,
+        default: 2000,
+        min: [1000, 'Daily calorie target must be at least 1000'],
+        max: [5000, 'Daily calorie target cannot exceed 5000']
+    },
+    preferredCuisines: [{
+        type: String,
+        trim: true
+    }],
+    // Flag to indicate if user profile is complete for recommendations
+    profileCompleted: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 });
