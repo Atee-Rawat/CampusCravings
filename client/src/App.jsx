@@ -18,6 +18,7 @@ import Checkout from './pages/student/Checkout';
 import OrderTracking from './pages/student/OrderTracking';
 import Orders from './pages/student/Orders';
 import Profile from './pages/student/Profile';
+import Recommendations from './pages/student/Recommendations';
 
 // Admin Pages
 import AdminLogin from './pages/admin/Login';
@@ -110,6 +111,7 @@ function App() {
                 <Route path="order/:id" element={<OrderTracking />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="recommendations" element={<Recommendations />} />
             </Route>
 
             {/* 404 */}

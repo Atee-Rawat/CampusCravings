@@ -302,9 +302,15 @@ h4 {
    ======================================== */
 .container {
   width: 100%;
-  max-width: 480px;
+  max-width: 480px; /* mobile-first */
   margin: 0 auto;
   padding: 0 var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 980px; /* wider layout for tablet/desktop */
+  }
 }
 
 .flex {
@@ -1360,6 +1366,34 @@ h4 {
 /* Glow Effect */
 .glow-primary {
   box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+}
+
+/* Recommendations horizontal strip */
+.recommendations-strip {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 6px;
+}
+
+.recommendations-strip::-webkit-scrollbar {
+  height: 8px;
+}
+
+.recommendations-strip::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 999px;
+}
+
+.recommendations-strip .recommendation-card {
+  scroll-snap-align: start;
+  flex: 0 0 320px;
+}
+
+.recommendation-skeleton {
+  scroll-snap-align: start;
 }
 
 .glow-secondary {

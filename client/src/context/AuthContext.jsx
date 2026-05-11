@@ -109,9 +109,9 @@ export const AuthProvider = ({ children }) => {
                     // User might not exist in our DB yet
                 }
             } else {
-                // Check if we have a dev token
+                // Check if we have a stored token
                 const storedToken = storage.getItem('token');
-                if (storedToken === 'dev-token' || storedToken?.startsWith('dev-user-')) {
+                if (storedToken) {
                     try {
                         const response = await api.get('/auth/me');
                         setUser(response.data.data);

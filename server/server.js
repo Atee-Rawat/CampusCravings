@@ -47,6 +47,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/analyze', require('./routes/analyze'));
 app.use('/api/queue', require('./routes/queue'));
 app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/ai', require('./routes/ai')); // AI Recommendation Engine routes
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -71,6 +72,19 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.io ready for connections`);
+});
+
+// Helpful error handling for common server startup failures
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`ERROR: Port ${PORT} is already in use. Another process is listening on this port.`);
+    console.error('If this is unexpected, find and stop the process or set PORT in your .env to a free port.');
+    // Exit with non-zero so tools (concurrently / nodemon) don't hang
+    process.exit(1);
+  }
+
+  console.error('Server error:', err);
+  process.exit(1);
 });
 
 module.exports = { app, server, io };

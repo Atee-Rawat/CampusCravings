@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Clock, MapPin, Plus, Minus, ShoppingBag, Leaf, Tag, Star, X } from 'lucide-react';
 import { outletsAPI, menuAPI, analyzeAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
@@ -59,6 +59,7 @@ const estimateFallbackNutrition = (item) => {
 const Outlet = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const { addItem, getItemQuantity, incrementQuantity, decrementQuantity, itemCount, outlet: cartOutlet } = useCart();
 
@@ -72,6 +73,9 @@ const Outlet = () => {
     const [healthyOnly, setHealthyOnly] = useState(false);
     const [coupons, setCoupons] = useState([]);
     const [reviewsModalItem, setReviewsModalItem] = useState(null);
+    const [highlightedMenuItemId, setHighlightedMenuItemId] = useState(null);
+    const menuItemRefs = useRef({});
+    const lastProcessedHighlightRef = useRef(null);
 
     useEffect(() => {
         const fetchOutletAndMenu = async () => {
@@ -177,6 +181,54 @@ const Outlet = () => {
         });
         return result;
     }, [menu, nutritionData]);
+
+    useEffect(() => {
+        const requestedMenuItemId = location.state?.highlightMenuItemId || location.state?.menuItemId;
+        if (!requestedMenuItemId || requestedMenuItemId === lastProcessedHighlightRef.current) {
+            return;
+        }
+
+        let targetCategory = '';
+        let targetItem = null;
+
+        Object.entries(menuWithNutrition).some(([category, items]) => {
+            const match = items.find(item => item._id === requestedMenuItemId);
+            if (match) {
+                targetCategory = category;
+                targetItem = match;
+                return true;
+            }
+
+            return false;
+        });
+
+        if (!targetItem) return;
+
+        lastProcessedHighlightRef.current = requestedMenuItemId;
+        setSearchQuery('');
+        setHealthyOnly(false);
+
+        if (targetCategory && targetCategory !== activeCategory) {
+            setActiveCategory(targetCategory);
+        }
+
+        setHighlightedMenuItemId(requestedMenuItemId);
+    }, [activeCategory, location.state, menuWithNutrition]);
+
+    useEffect(() => {
+        if (!highlightedMenuItemId) return;
+
+        const element = menuItemRefs.current[highlightedMenuItemId];
+        if (!element) return;
+
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        const timer = window.setTimeout(() => {
+            setHighlightedMenuItemId(null);
+        }, 2600);
+
+        return () => window.clearTimeout(timer);
+    }, [highlightedMenuItemId, menuWithNutrition, activeCategory]);
 
     // Filter menu items by search and healthy filter
     const getFilteredItems = () => {
@@ -366,9 +418,27 @@ const Outlet = () => {
                     ) : (
                         filteredItems.map(item => {
                             const quantity = getItemQuantity(item._id);
+                            const isHighlighted = highlightedMenuItemId === item._id;
 
                             return (
-                                <div key={item._id} className="menu-item">
+                                <div
+                                    key={item._id}
+                                    ref={(element) => {
+                                        if (element) {
+                                            menuItemRefs.current[item._id] = element;
+                                        } else {
+                                            delete menuItemRefs.current[item._id];
+                                        }
+                                    }}
+                                    className="menu-item"
+                                    style={{
+                                        scrollMarginTop: 140,
+                                        boxShadow: isHighlighted ? '0 0 0 2px rgba(16, 185, 129, 0.45), 0 18px 40px rgba(16, 185, 129, 0.12)' : undefined,
+                                        background: isHighlighted ? 'linear-gradient(180deg, rgba(236, 253, 245, 0.9), rgba(255, 255, 255, 1))' : undefined,
+                                        transform: isHighlighted ? 'translateY(-2px)' : undefined,
+                                        transition: 'box-shadow 180ms ease, transform 180ms ease, background 180ms ease'
+                                    }}
+                                >
                                     <div className="menu-item-info">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                                             <span className={`veg-indicator ${item.isVeg ? 'veg' : 'non-veg'}`}></span>

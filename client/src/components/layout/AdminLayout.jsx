@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, UtensilsCrossed, LogOut, Store, BarChart3, Tag, Menu, X, Settings, Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import ConfirmModal from '../ConfirmModal';
 import '../../styles/AdminAnimations.css';
 
 const AdminLayout = () => {
@@ -9,6 +10,7 @@ const AdminLayout = () => {
     const { theme, toggleTheme, isDark } = useTheme();
     const [outlet, setOutlet] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('adminToken');
@@ -27,6 +29,7 @@ const AdminLayout = () => {
     const handleLogout = () => {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminOutlet');
+        setShowLogoutModal(false);
         navigate('/admin/login');
     };
 
@@ -150,7 +153,7 @@ const AdminLayout = () => {
                 </nav>
 
                 <button
-                    onClick={handleLogout}
+                    onClick={() => setShowLogoutModal(true)}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -163,6 +166,18 @@ const AdminLayout = () => {
                     <LogOut size={20} />
                     <span>Logout</span>
                 </button>
+
+                {/* Logout Confirmation Modal */}
+                <ConfirmModal
+                    isOpen={showLogoutModal}
+                    title="Logout"
+                    message="Are you sure you want to logout from the admin panel? You'll need to login again."
+                    confirmText="Yes, Logout"
+                    cancelText="Cancel"
+                    onConfirm={handleLogout}
+                    onCancel={() => setShowLogoutModal(false)}
+                    isDanger={true}
+                />
             </aside>
 
             {/* Main Content */}
