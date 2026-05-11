@@ -592,7 +592,7 @@ h4 {
   height: 200px;
 }
 
-.timer-ring svg {
+.timer-ring > svg {
   transform: rotate(-90deg);
 }
 
