@@ -118,6 +118,7 @@ const AdminLogin = () => {
                                 placeholder="Enter password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autocomplete="current-password"
                                 style={{ paddingLeft: 48, paddingRight: 48 }}
                             />
                             <Lock

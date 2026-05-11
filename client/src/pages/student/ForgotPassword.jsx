@@ -161,6 +161,7 @@ const ForgotPassword = () => {
                                     placeholder="Enter new password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autocomplete="new-password"
                                     style={{ paddingLeft: 48, paddingRight: 48 }}
                                 />
                                 <Lock

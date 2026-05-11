@@ -219,6 +219,7 @@ const Register = () => {
                                 placeholder="Create a password"
                                 value={formData.password}
                                 onChange={handleChange}
+                                autocomplete="new-password"
                                 style={{ paddingLeft: 48, paddingRight: 48 }}
                             />
                             <Lock
@@ -261,6 +262,7 @@ const Register = () => {
                                 placeholder="Confirm your password"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
+                                autocomplete="new-password"
                                 style={{ paddingLeft: 48, paddingRight: 48 }}
                             />
                             <Lock

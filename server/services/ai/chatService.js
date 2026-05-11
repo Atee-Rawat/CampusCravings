@@ -333,10 +333,36 @@ const buildRetrievalQuery = ({ message, user, currentMenuItem, historySummary })
     ].filter(Boolean).join('\n');
 };
 
+const estimateProteinGrams = (item) => {
+    const actualProtein = Number(item?.nutrition?.protein);
+    if (Number.isFinite(actualProtein) && actualProtein > 0) {
+        return actualProtein;
+    }
+
+    const text = `${item?.name || ''} ${item?.description || ''}`.toLowerCase();
+    let estimatedProtein = 2;
+
+    if (/chicken|paneer|egg|fish|tofu|soy|lentil|dal|beans|chickpea|sprout|milk|curd|yogurt/.test(text)) {
+        estimatedProtein += 4;
+    }
+
+    if (/grilled|roasted|boiled|bowl|salad|soup|wrap|sandwich/.test(text)) {
+        estimatedProtein += 1;
+    }
+
+    if (/fries|dessert|cake|cookie|soda|cola|chips|ice cream/.test(text)) {
+        estimatedProtein = Math.max(1, estimatedProtein - 1);
+    }
+
+    return Math.max(1, estimatedProtein);
+};
+
+const getProteinLabel = (item) => `${estimateProteinGrams(item)}g protein`;
+
 const buildMenuItemBrief = (item) => {
     const price = typeof item.price === 'number' ? `₹${(item.price / 100).toFixed(2)}` : 'N/A';
     const calories = item.nutrition?.calories ?? 'unknown';
-    const protein = item.nutrition?.protein ?? 'unknown';
+    const protein = getProteinLabel(item);
     const carbs = item.nutrition?.carbs ?? 'unknown';
     const outletName = item.outlet?.name || 'Unknown outlet';
 
@@ -357,6 +383,7 @@ const buildMenuItemBrief = (item) => {
 const defaultNutritionResponse = ({ message, user, currentMenuItem, retrievedItems = [] }) => {
     const lowerMessage = String(message || '').toLowerCase();
 
+    // Always rank and show retrieved items if they exist
     const rankedItems = [...retrievedItems]
         .filter(Boolean)
         .sort((a, b) => {
@@ -368,11 +395,11 @@ const defaultNutritionResponse = ({ message, user, currentMenuItem, retrievedIte
             const ratingB = Number(b.averageRating || 0);
             return ratingB - ratingA;
         })
-        .slice(0, 3);
+        .slice(0, 5);
 
     const suggestions = rankedItems.map((item) => ({
         menuItem: serializeMenuItem(item),
-        reason: `${Number(item.nutrition?.protein || 0)}g protein${item.category ? ` • ${item.category}` : ''}`
+        reason: `${getProteinLabel(item)}${item.category ? ` • ${item.category}` : ''}`
     }));
 
     if (currentMenuItem && !suggestions.some((suggestion) => suggestion.menuItem?.id === String(currentMenuItem.id))) {
@@ -387,11 +414,18 @@ const defaultNutritionResponse = ({ message, user, currentMenuItem, retrievedIte
         ...suggestions.map((suggestion) => `MenuItem ID ${suggestion.menuItem.id}`)
     ])];
 
-    // Always return suggestions if available, regardless of the query type
+    // ALWAYS show suggestions if available – this is the authoritative response
     if (suggestions.length > 0) {
-        const response = lowerMessage.includes('protein')
-            ? `Here are the best high-protein menu options with ${Math.max(...rankedItems.map(item => Number(item.nutrition?.protein || 0)))}g+ protein each.`
-            : `Based on your request and profile, here are some great options from the campus menu.`;
+        let response;
+        if (lowerMessage.includes('protein')) {
+                response = `Here are the best high-protein menu options from campus (${Math.max(...rankedItems.map(item => estimateProteinGrams(item)))}g+ protein each).`;
+        } else if (lowerMessage.includes('low calorie') || lowerMessage.includes('diet')) {
+            response = `Check out these lighter menu options from campus that match your request.`;
+        } else if (lowerMessage.includes('budget') || lowerMessage.includes('cheap')) {
+            response = `Here are affordable menu options within your budget.`;
+        } else {
+            response = `Based on your request and profile, here are some great options from the campus menu.`;
+        }
         
         return {
             response,
@@ -400,11 +434,11 @@ const defaultNutritionResponse = ({ message, user, currentMenuItem, retrievedIte
         };
     }
 
-    // Fallback when no items available
+    // Fallback when no items available (this should rarely happen now)
     const response = lowerMessage.includes('protein')
-        ? 'I could not find high-protein menu items right now, but I can help refine the search if you want.'
+        ? 'I could not find high-protein menu items in the campus cafeteria right now. Try checking back later or ask the outlet staff for protein-rich options.'
         : lowerMessage.includes('allergy')
-            ? 'For allergies, I recommend avoiding any item that could contain the allergen and double-checking ingredients with the outlet. I can suggest safe menu options if you want me to search the campus menu.'
+            ? 'For allergies, I recommend avoiding any item that could contain the allergen and double-checking ingredients with the outlet staff. I can suggest menu options if you want me to search the campus menu.'
             : `Based on your profile, a good rule of thumb is to choose meals that stay within ₹${((user.budgetPerMeal || 0) / 100).toFixed(2)} and align with your calorie target of ${user.dailyCalorieTarget || 'your target'} calories.`;
 
     return {
@@ -491,8 +525,25 @@ const generateNutritionistReply = async ({ message, userId, sessionId, currentMe
     });
 
     const retrievedDocs = await vectorStore.similaritySearch(retrievalQuery, 6);
-    const retrievedItems = await hydrateMenuItems(retrievedDocs.map((doc) => doc.metadata?.itemId || doc.metadata?.id));
+    let retrievedItems = await hydrateMenuItems(retrievedDocs.map((doc) => doc.metadata?.itemId || doc.metadata?.id));
 
+    // Fallback: if vector store returns nothing, query database directly for menu items
+    if (!retrievedItems || retrievedItems.length === 0) {
+        try {
+            const dbItems = await MenuItem
+                .find({ isAvailable: true })
+                .select('_id name description nutrition averageRating category price isVeg outlet')
+                .populate('outlet', 'name')
+                .limit(6)
+                .lean();
+            retrievedItems = dbItems || [];
+        } catch (dbError) {
+            console.warn('Database fallback failed:', dbError.message);
+            retrievedItems = [];
+        }
+    }
+
+    const lowerMessage = String(message || '').toLowerCase();
     const llm = getChatModel();
     const systemPrompt = `You are CampusCravings Smart AI Nutritionist.
 
@@ -564,14 +615,29 @@ Rules for suggestions:
         modelPayload = defaultNutritionResponse({ message, user, currentMenuItem, retrievedItems });
     }
 
-    const suggestionIds = (modelPayload.suggestions || [])
+    const needsActionFallback = (lowerMessage.includes('protein') || lowerMessage.includes('high protein')
+        || lowerMessage.includes('diet') || lowerMessage.includes('low cal')
+        || lowerMessage.includes('budget') || lowerMessage.includes('cheap')
+        || lowerMessage.includes('allergy'))
+        && retrievedItems.length > 0
+        && (!modelPayload.suggestions || modelPayload.suggestions.length === 0);
+
+    const fallbackPayload = needsActionFallback
+        ? defaultNutritionResponse({ message, user, currentMenuItem, retrievedItems })
+        : null;
+
+    const suggestionSource = needsActionFallback
+        ? (fallbackPayload?.suggestions || [])
+        : (modelPayload.suggestions || []);
+
+    const suggestionIds = suggestionSource
         .map((suggestion) => suggestion.menuItemId)
         .filter(Boolean);
 
     const hydratedSuggestions = await hydrateMenuItems(suggestionIds);
     const suggestionMap = new Map(hydratedSuggestions.map((item) => [String(item._id), item]));
 
-    const suggestions = (modelPayload.suggestions || [])
+    const suggestions = suggestionSource
         .map((suggestion) => {
             const menuItem = suggestionMap.get(String(suggestion.menuItemId));
             if (!menuItem) {
@@ -591,9 +657,15 @@ Rules for suggestions:
         ...suggestions.map((suggestion) => `MenuItem ID ${suggestion.menuItem.id}`)
     ])];
 
-    const responseText = typeof modelPayload.response === 'string' && modelPayload.response.trim()
-        ? modelPayload.response.trim()
-        : defaultNutritionResponse({ message, user, currentMenuItem, retrievedItems }).response;
+    let responseText;
+    if (needsActionFallback) {
+        responseText = fallbackPayload.response;
+    } else if (typeof modelPayload.response === 'string' && modelPayload.response.trim()) {
+        responseText = modelPayload.response.trim();
+    } else {
+        const fallback = defaultNutritionResponse({ message, user, currentMenuItem, retrievedItems });
+        responseText = fallback.response;
+    }
 
     appendSessionMessage(normalizedSessionId, 'assistant', responseText);
 

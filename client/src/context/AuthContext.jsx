@@ -19,9 +19,15 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:abc123"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Initialize Firebase (with error suppression for demo environment)
+let app, auth;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+} catch (error) {
+    console.warn('⚠️ Firebase initialization error (expected in demo mode):', error.message);
+    // Gracefully handle Firebase initialization errors
+}
 
 const AuthContext = createContext(null);
 
@@ -89,8 +95,13 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(storage.getItem('token'));
 
-    // Listen for Firebase auth state changes
+    // Listen for Firebase auth state changes (only if Firebase initialized)
     useEffect(() => {
+        if (!auth) {
+            setLoading(false);
+            return;
+        }
+        
         const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
             setFirebaseUser(fbUser);
 
@@ -161,8 +172,13 @@ export const AuthProvider = ({ children }) => {
         return response.data;
     };
 
-    // Setup recaptcha for phone auth
+    // Setup recaptcha for phone auth (only if Firebase initialized)
     const setupRecaptcha = (elementId) => {
+        if (!auth) {
+            console.warn('⚠️ Firebase not initialized - phone auth unavailable');
+            return null;
+        }
+        
         if (!window.recaptchaVerifier) {
             window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
                 size: 'invisible',
@@ -176,11 +192,19 @@ export const AuthProvider = ({ children }) => {
 
     // Send OTP to phone
     const sendOTP = async (phoneNumber) => {
+        if (!auth) {
+            throw new Error('Firebase not initialized - phone auth unavailable');
+        }
+        
         const formattedPhone = phoneNumber.startsWith('+91')
             ? phoneNumber
             : `+91${phoneNumber}`;
 
         const appVerifier = setupRecaptcha('recaptcha-container');
+        if (!appVerifier) {
+            throw new Error('reCAPTCHA setup failed');
+        }
+        
         const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
         window.confirmationResult = confirmationResult;
         return confirmationResult;
