@@ -149,8 +149,29 @@ const retrieveRelevantItems = async (query, limit = 20) => {
 
         return results;
     } catch (error) {
-        console.error('Error retrieving relevant items:', error);
-        throw error;
+        console.warn('Vector store retrieval failed, falling back to database:', error.message);
+        
+        // Fallback: Query database directly for available menu items
+        try {
+            const dbItems = await MenuItem
+                .find({ isAvailable: true })
+                .select('_id name description nutrition averageRating category price isVeg outlet')
+                .populate('outlet', 'name')
+                .limit(limit)
+                .lean();
+            
+            // Convert database items to vector store format for consistency
+            return dbItems.map(item => ({
+                pageContent: `${item.name} - ${item.description || ''} (${item.category})`,
+                metadata: { 
+                    id: String(item._id),
+                    itemId: String(item._id)
+                }
+            }));
+        } catch (dbError) {
+            console.error('Database fallback also failed:', dbError.message);
+            throw error; // Throw original error if fallback fails too
+        }
     }
 };
 
@@ -204,6 +225,52 @@ ${favoriteItems.map(item => `- ${item.name} (${item.category})`).join('\n')}
     }
 };
 
+const estimateProteinGrams = (menuItem) => {
+    const actualProtein = Number(menuItem?.nutrition?.protein);
+    if (Number.isFinite(actualProtein) && actualProtein > 0) {
+        return actualProtein;
+    }
+
+    const text = `${menuItem?.name || ''} ${menuItem?.description || ''}`.toLowerCase();
+    let estimatedProtein = 2;
+
+    if (/chicken|paneer|egg|fish|tofu|soy|lentil|dal|beans|chickpea|sprout|milk|curd|yogurt/.test(text)) {
+        estimatedProtein += 4;
+    }
+
+    if (/grilled|roasted|boiled|bowl|salad|soup|wrap|sandwich/.test(text)) {
+        estimatedProtein += 1;
+    }
+
+    if (/fries|dessert|cake|cookie|soda|cola|chips|ice cream/.test(text)) {
+        estimatedProtein = Math.max(1, estimatedProtein - 1);
+    }
+
+    return Math.max(1, estimatedProtein);
+};
+
+const buildLocalRecommendationFallback = (menuItems, limit) => {
+    const rankedItems = [...(menuItems || [])]
+        .filter(Boolean)
+        .sort((a, b) => {
+            const proteinDelta = estimateProteinGrams(b) - estimateProteinGrams(a);
+            if (proteinDelta !== 0) return proteinDelta;
+
+            const ratingDelta = Number(b.averageRating || 0) - Number(a.averageRating || 0);
+            if (ratingDelta !== 0) return ratingDelta;
+
+            return Number(a.price || 0) - Number(b.price || 0);
+        })
+        .slice(0, limit);
+
+    return rankedItems.map((menuItem, index) => ({
+        menuItemId: String(menuItem._id),
+        matchScore: Math.max(50, 100 - index * 10),
+        personalizedReason: `Highest estimated protein among the currently available menu items (${estimateProteinGrams(menuItem)}g protein).`,
+        nutritionalHighlights: `${estimateProteinGrams(menuItem)}g protein${menuItem.nutrition?.calories ? `, ${menuItem.nutrition.calories} calories` : ''}`
+    }));
+};
+
 /**
  * Generate personalized recommendations using RAG
  * @param {string} userId - User ID
@@ -247,7 +314,12 @@ const recommendMeals = async (userId, options = {}) => {
             return [];
         }
 
-        // Step 4: Use Gemini for final ranking and reasoning
+        const retrievedItemIds = [...new Set(retrievedDocs.map((doc) => doc.metadata?.id || doc.metadata?.itemId).filter(Boolean).map(String))];
+        const menuItems = await MenuItem.find({ _id: { $in: retrievedItemIds } })
+            .populate('outlet', 'name location')
+            .lean();
+
+        // Step 4: Use Gemini for final ranking and reasoning, with a local fallback when quota is exceeded
         const gemini = getGeminiModel();
 
         const systemPrompt = `You are a personalized meal recommendation AI assistant for a campus food ordering platform.
@@ -287,19 +359,14 @@ Return ONLY the top ${limit} items in the specified JSON format.
             new HumanMessage(userMessage)
         ];
 
-        const response = await gemini.invoke(messages);
-        const responseText = typeof response.content === 'string' ? response.content : String(response.content || '');
-
         // Robust JSON array extraction: strip code fences and language tags,
         // then find first '[' and last ']' and parse that slice.
         const cleanAndParse = (text) => {
             if (!text || typeof text !== 'string') return null;
-            // Remove triple-backtick fences with optional language (e.g. ```json)
             let cleaned = text.replace(/```(?:json)?\s*/i, '');
             cleaned = cleaned.replace(/\s*```$/i, '');
             cleaned = cleaned.trim();
 
-            // Find JSON array boundaries
             const firstBracket = cleaned.indexOf('[');
             const lastBracket = cleaned.lastIndexOf(']');
             if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
@@ -310,7 +377,6 @@ Return ONLY the top ${limit} items in the specified JSON format.
             try {
                 return JSON.parse(candidate);
             } catch (e) {
-                // Try a looser cleanup: remove non-printable chars
                 const relaxed = candidate.replace(/[^\x20-\x7E\n\r\t\[\]\{\}:,\"\'\\]/g, '');
                 try {
                     return JSON.parse(relaxed);
@@ -320,29 +386,30 @@ Return ONLY the top ${limit} items in the specified JSON format.
             }
         };
 
-        let recommendations = cleanAndParse(responseText);
-        if (!Array.isArray(recommendations)) {
-            console.error('Error parsing Gemini response: could not extract valid JSON array');
-            console.error('Response text:', responseText);
-            // Fallback: return top items sorted by retrieval score
-            recommendations = retrievedDocs.slice(0, limit).map((doc, i) => ({
-                menuItemId: doc.metadata.id,
-                matchScore: Math.max(0, 100 - i * 10),
-                personalizedReason: 'Relevant to your preferences',
-                nutritionalHighlights: `Calories: ${doc.metadata.calories || 'N/A'}, Protein: ${doc.metadata.protein || 'N/A'}g`
-            }));
+        let recommendations = [];
+        try {
+            const response = await gemini.invoke(messages);
+            const responseText = typeof response.content === 'string' ? response.content : String(response.content || '');
+            const parsedRecommendations = cleanAndParse(responseText);
+
+            if (Array.isArray(parsedRecommendations)) {
+                recommendations = parsedRecommendations;
+            } else {
+                console.warn('Gemini returned non-JSON recommendations, using local fallback');
+                recommendations = buildLocalRecommendationFallback(menuItems, limit);
+            }
+        } catch (error) {
+            console.warn('Gemini recommendation ranking unavailable, using local fallback:', error.message);
+            recommendations = buildLocalRecommendationFallback(menuItems, limit);
         }
 
-        // Step 5: Fetch full menu item details for response
-        const menuItemIds = recommendations.map(rec => rec.menuItemId);
-        const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
-            .populate('outlet', 'name location')
-            .lean();
+        // Step 5: Merge recommendations with the preloaded menu item details
+        const menuItemsById = new Map(menuItems.map((item) => [String(item._id), item]));
 
         // Merge recommendations with menu item details
         const enrichedRecommendations = recommendations
             .map(rec => {
-                const menuItem = menuItems.find(m => m._id.toString() === rec.menuItemId);
+                const menuItem = menuItemsById.get(String(rec.menuItemId));
                 return menuItem ? {
                     menuItem: {
                         _id: menuItem._id,
