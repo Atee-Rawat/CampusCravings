@@ -1,4 +1,4 @@
-# CampusCravings 🍕
+  # CampusCravings 🍕
 
 A mobile-first food ordering web application designed exclusively for university campuses.
 
@@ -88,7 +88,6 @@ Running AI features locally:
 1. Make sure `GOOGLE_API_KEY` is set in `server/.env` (see `server/.env.example`). The app will start a local Chroma server automatically if one is not already running.
 2. Start the backend normally (`npm run dev:server` or `node server/server.js`) — the chat service will initialize the vector store on demand.
 
-If you want to reindex or manually control the Chroma instance, check `/server/src/scripts/initVectorStore.js` and the `chromadb` directory for data files.
 
 ## AI Recommendations (new)
 
@@ -103,5 +102,3 @@ Files of interest:
 - `server/services/ai/chatService.js` — chat endpoint, retrieval + LLM orchestration, fallback logic
 - `client/src/components/AIChatbot.jsx` — chat UI and suggestion rendering
 - `client/src/components/RecommendationsList.jsx` and `RecommendationCard.jsx` — recommendation UI
-
-If you'd like, I can add an example API call or Postman collection for the chat/recommendation endpoints.
