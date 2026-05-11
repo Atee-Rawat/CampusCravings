@@ -102,3 +102,4 @@ Files of interest:
 - `server/services/ai/chatService.js` — chat endpoint, retrieval + LLM orchestration, fallback logic
 - `client/src/components/AIChatbot.jsx` — chat UI and suggestion rendering
 - `client/src/components/RecommendationsList.jsx` and `RecommendationCard.jsx` — recommendation UI
+
