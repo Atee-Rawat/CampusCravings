@@ -43,8 +43,8 @@ const AdminLogin = () => {
         setLoading(true);
         try {
             const response = await api.post('/admin/login', {
-                email: 'owner@demo.com',
-                password: 'demo1234'
+                email: 'bennett.cafe@test.com',
+                password: 'bennett123'
             });
 
             if (response.data.success) {
@@ -212,7 +212,7 @@ const AdminLogin = () => {
                     onClick={handleDemoLogin}
                     disabled={loading}
                 >
-                    Demo Login (owner@demo.com)
+                    Demo Login (bennett.cafe@test.com)
                 </button>
             </div>
         </div>

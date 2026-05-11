@@ -305,8 +305,8 @@ const OrderTracking = () => {
                             className="btn btn-secondary"
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-sm)' }}
                         >
-                            <Phone size={18} />
-                            Call {order.outlet.contact.phone}
+                                <Phone size={20} />
+                                Call {order.outlet.contact.phone}
                         </a>
                     </div>
                 )}
@@ -500,7 +500,7 @@ const OrderTracking = () => {
                             href={`tel:${order.outlet.contact.phone}`}
                             className="btn btn-ghost btn-icon"
                         >
-                            <Phone size={20} />
+                            <Phone size={22} />
                         </a>
                     )}
                 </div>

@@ -1,4 +1,4 @@
-# CampusCravings 🍕
+  # CampusCravings 🍕
 
 A mobile-first food ordering web application designed exclusively for university campuses.
 
