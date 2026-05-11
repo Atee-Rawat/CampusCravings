@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Home, ShoppingBag, User, Clock } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import AIChatbot from '../AIChatbot';
 
 const Layout = () => {
     const { pathname } = useLocation();
@@ -8,11 +9,13 @@ const Layout = () => {
 
     // Hide bottom nav on certain pages
     const hideNav = pathname.includes('/checkout') || pathname.includes('/order/');
+    const hideChatbot = pathname === '/cart';
 
     return (
         <div className="app-layout">
             <main className={`main-content ${hideNav ? 'pb-0' : ''}`} style={hideNav ? { paddingBottom: 0 } : {}}>
                 <Outlet />
+                {!hideChatbot && <AIChatbot />}
             </main>
 
             {!hideNav && (

@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require('express-validator');
 const { validate, verifyToken } = require('../middleware');
 const { Order, MenuItem, Outlet, User } = require('../models');
+const cache = require('../services/cache');
 
 // @route   POST /api/orders
 // @desc    Create a new order
@@ -74,6 +75,13 @@ router.post('/', verifyToken, [
         });
 
         await order.populate('outlet', 'name slug');
+
+        // Invalidate recommendation cache for user (order may change preferences)
+        try {
+            await cache.delPrefix(`recommend:${req.user._id}:`);
+        } catch (e) {
+            console.warn('Failed to invalidate recommendation cache after order create', e.message);
+        }
 
         res.status(201).json({
             success: true,
@@ -224,6 +232,12 @@ router.post('/:id/dev-pay', verifyToken, async (req, res) => {
         }
 
         await order.populate('outlet', 'name slug');
+
+        try {
+            await cache.delPrefix(`recommend:${req.user._id}:`);
+        } catch (e) {
+            console.warn('Failed to invalidate recommendation cache after dev payment', e.message);
+        }
 
         res.json({
             success: true,

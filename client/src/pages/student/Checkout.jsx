@@ -5,6 +5,8 @@ import { useCart } from '../../context/CartContext';
 import api, { ordersAPI, paymentsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
+const getId = (value) => value?._id || value?.id || value || null;
+
 const Checkout = () => {
     const navigate = useNavigate();
     const { items, outlet, subtotal, total, formattedSubtotal, formattedTotal, formattedDiscount, discount, appliedCoupon, maxPrepTime, clearCart, isEmpty } = useCart();
@@ -16,15 +18,21 @@ const Checkout = () => {
         return null;
     }
 
+    if (!outlet) {
+        navigate('/cart');
+        toast.error('Cart outlet information is missing. Please add the item again from the outlet or recommendations page.');
+        return null;
+    }
+
     const handlePayment = async () => {
         setLoading(true);
 
         try {
             // 1. Create order
             const orderData = {
-                outletId: outlet._id,
+                outletId: getId(outlet),
                 items: items.map(item => ({
-                    menuItemId: item._id,
+                    menuItemId: getId(item),
                     quantity: item.quantity
                 })),
                 specialInstructions
@@ -103,9 +111,9 @@ const Checkout = () => {
         try {
             // 1. Create order
             const orderData = {
-                outletId: outlet._id,
+                outletId: getId(outlet),
                 items: items.map(item => ({
-                    menuItemId: item._id,
+                    menuItemId: getId(item),
                     quantity: item.quantity
                 })),
                 specialInstructions
@@ -179,7 +187,7 @@ const Checkout = () => {
 
                 {items.map(item => (
                     <div
-                        key={item._id}
+                        key={getId(item)}
                         style={{
                             display: 'flex',
                             justifyContent: 'space-between',

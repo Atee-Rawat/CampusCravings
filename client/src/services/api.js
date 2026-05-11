@@ -20,12 +20,12 @@ api.interceptors.request.use(
         // Use adminToken for admin routes, regular token otherwise
         const requestUrl = config.url || '';
         if (requestUrl.startsWith('/admin')) {
-            const adminToken = localStorage.getItem('adminToken');
+            const adminToken = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
             if (adminToken) {
                 config.headers.Authorization = `Bearer ${adminToken}`;
             }
         } else {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -59,10 +59,12 @@ api.interceptors.response.use(
                 // Check if this is an admin route
                 if (requestUrl.startsWith('/admin')) {
                     localStorage.removeItem('adminToken');
+                    sessionStorage.removeItem('adminToken');
                     localStorage.removeItem('adminOutlet');
                     window.location.href = '/admin/login';
                 } else {
                     localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                     window.location.href = '/login';
                 }
             }

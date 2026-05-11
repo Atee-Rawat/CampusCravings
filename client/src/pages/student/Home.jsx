@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, MapPin, Clock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, MapPin, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { outletsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
+import RecommendationsList from '../../components/RecommendationsList';
 
 const Home = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [outlets, setOutlets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +56,25 @@ const Home = () => {
                     What would you like to eat today?
                 </p>
             </div>
+            {/* Recommendations */}
+            {user && (
+                <div style={{ marginTop: 'var(--space-md)' }}>
+                    <div 
+                        onClick={() => navigate('/recommendations')}
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between', 
+                            marginBottom: 12,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Recommended For You</h2>
+                        <ChevronRight size={20} color="#6b7280" />
+                    </div>
+                    <RecommendationsList limit={6} showTitle={false} />
+                </div>
+            )}
 
             {/* Search Bar */}
             <div className="search-bar">

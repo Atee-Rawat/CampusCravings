@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, Tag, X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 
+const getId = (value) => value?._id || value?.id || value || null;
+
 const Cart = () => {
     const navigate = useNavigate();
     const {
@@ -133,7 +135,7 @@ const Cart = () => {
             {/* Cart Items */}
             <div style={{ marginBottom: 'var(--space-lg)' }}>
                 {items.map(item => (
-                    <div key={item._id} className="cart-item">
+                    <div key={getId(item)} className="cart-item">
                         <div className="cart-item-info">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                                 <span className={`veg-indicator ${item.isVeg ? 'veg' : 'non-veg'}`}></span>
@@ -148,21 +150,21 @@ const Cart = () => {
                             <div className="quantity-control">
                                 <button
                                     className="quantity-btn"
-                                    onClick={() => decrementQuantity(item._id)}
+                                    onClick={() => decrementQuantity(getId(item))}
                                 >
                                     <Minus size={16} />
                                 </button>
                                 <span className="quantity-value">{item.quantity}</span>
                                 <button
                                     className="quantity-btn"
-                                    onClick={() => incrementQuantity(item._id)}
+                                    onClick={() => incrementQuantity(getId(item))}
                                 >
                                     <Plus size={16} />
                                 </button>
                             </div>
 
                             <button
-                                onClick={() => removeItem(item._id)}
+                                onClick={() => removeItem(getId(item))}
                                 style={{ color: 'var(--error)', padding: 8 }}
                             >
                                 <Trash2 size={18} />
